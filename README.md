@@ -8,6 +8,7 @@ Claude Code skills for infrastructure and scripting best practices.
 | ------------------------ | ---------------------------------------------------- |
 | `developing-helm-charts` | Helm chart conventions, security, values design      |
 | `writing-rego-policies`  | OPA/Rego policy rules, testing, Kubernetes admission |
+| `writing-dockerfiles`    | Dockerfile conventions, multi-stage builds, security |
 | `writing-shell-scripts`  | Bash scripting, CLI tools, deployment scripts        |
 
 ## Structure
