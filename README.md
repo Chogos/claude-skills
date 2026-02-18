@@ -21,7 +21,7 @@ Claude Code skills for infrastructure, languages, and development best practices
 
 Each skill uses progressive disclosure — `SKILL.md` is the overview loaded on trigger, with deeper reference files loaded only when needed:
 
-```
+```text
 <skill>/
 ├── SKILL.md              # Overview + conventions (loaded on trigger)
 ├── patterns/             # Full examples by use case (loaded on demand)
