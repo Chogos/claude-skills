@@ -7,9 +7,10 @@ description: Rego policy development best practices for OPA. Use when writing, m
 
 ## Core Conventions
 
-- Always use `import rego.v1` (OPA v0.59.0+) for modern Rego features. For OPA < v0.59.0, use `import future.keywords` instead.
-- Always use `opa fmt` for consistent formatting.
-- Use `opa check --strict` in build pipelines.
+- OPA v1.0+ uses Rego v1 semantics by default (`if`/`contains` keywords required, duplicate imports prohibited). Use `import rego.v1` for compatibility across OPA versions — it's a no-op in v1.0+ and opts in on older versions.
+- Use `--v0-compatible` flag when migrating legacy policies to v1.0.
+- Always use `opa fmt` for consistent formatting. Use `opa fmt --rego-v1` to auto-rewrite policies to v1 syntax.
+- Use `opa check` in build pipelines (strict mode is default in v1.0).
 - Prioritize clear code over assumed performance optimizations — OPA handles most optimization automatically.
 
 ## Naming & Style

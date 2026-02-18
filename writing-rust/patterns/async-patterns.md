@@ -2,6 +2,35 @@
 
 Production-ready async Rust patterns with tokio.
 
+## Async closures (Rust 1.85+ / 2024 edition)
+
+Async closures capture their environment like regular closures and return futures:
+
+```rust
+async fn retry<F>(f: impl AsyncFn() -> Result<Response>) -> Result<Response> {
+    for attempt in 0..3 {
+        match f().await {
+            Ok(resp) => return Ok(resp),
+            Err(e) if attempt < 2 => {
+                tracing::warn!("attempt {attempt} failed: {e:#}, retrying");
+                tokio::time::sleep(Duration::from_millis(100 * (attempt + 1) as u64)).await;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    unreachable!()
+}
+
+// Usage — closure captures `client` and `url`
+let client = reqwest::Client::new();
+let url = "https://api.example.com/data";
+let resp = retry(async || client.get(url).send().await.map_err(Into::into)).await?;
+```
+
+`AsyncFn`, `AsyncFnMut`, and `AsyncFnOnce` mirror the `Fn` trait hierarchy. Use `AsyncFn` for bounds that need to be called multiple times.
+
+Note: `Future` and `IntoFuture` are in the 2024 edition prelude — no manual import needed.
+
 ## Tokio runtime setup
 
 Default multi-threaded runtime:

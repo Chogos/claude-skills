@@ -51,7 +51,7 @@ http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 
 **Option 2** — Compile a static health check binary in the build stage:
 ```dockerfile
-FROM golang:1.23-alpine AS healthcheck
+FROM golang:1.26-alpine AS healthcheck
 RUN CGO_ENABLED=0 go install github.com/grpc-ecosystem/grpc-health-probe@latest
 
 FROM gcr.io/distroless/static-debian12:nonroot
@@ -69,7 +69,7 @@ Mount secrets at build time without baking them into image layers.
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM node:22-alpine
+FROM node:24-alpine
 
 # Secret available only during this RUN, never stored in a layer
 RUN --mount=type=secret,id=npm_token \
@@ -88,7 +88,7 @@ docker build --secret id=npm_token,src=.npm_token .
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM golang:1.23-alpine AS build
+FROM golang:1.26-alpine AS build
 RUN apk add --no-cache openssh-client git
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 RUN --mount=type=ssh go mod download

@@ -79,7 +79,7 @@ Full patterns: see [patterns/database-patterns.md](patterns/database-patterns.md
 
 ## Observability
 
-Three pillars: logs, metrics, traces. Every backend service must emit all three.
+Three pillars: logs, metrics, traces. Every backend service must emit all three. Use **OpenTelemetry (OTel)** as the instrumentation standard — it provides a single vendor-neutral SDK for all three pillars with auto-instrumentation for common frameworks and libraries.
 
 - **Structured logging**: JSON format with standard fields: `timestamp`, `level`, `message`, `service`, `request_id`, `trace_id`. Never log secrets, tokens, passwords, PII in plaintext.
 - **Metrics**: RED method for services (Rate, Errors, Duration). USE method for resources (Utilization, Saturation, Errors). Use histograms for latency — not averages.

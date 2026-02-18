@@ -45,7 +45,7 @@ members = ["crates/*"]
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.85"  # set to your project's minimum supported version
 license = "MIT"
 
 [workspace.dependencies]
@@ -218,6 +218,19 @@ pub struct Endpoint {
 | `Hash` | Type used as HashMap key (requires `Eq`) |
 | `Serialize` / `Deserialize` | Data crosses a boundary (network, disk, config) |
 
+**Trait upcasting** (1.86+) — coerce `&dyn SubTrait` to `&dyn SuperTrait` without a manual `as_base()` method:
+
+```rust
+trait Animal: std::fmt::Display {
+    fn name(&self) -> &str;
+}
+
+fn print_animal(a: &dyn Animal) {
+    let displayable: &dyn std::fmt::Display = a; // upcasting, no cast needed
+    println!("{displayable}");
+}
+```
+
 Prefer trait bounds over concrete types in public APIs:
 
 ```rust
@@ -304,44 +317,29 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
+**Async closures** (1.85+/2024 edition) — capture environment in async closures:
+
+```rust
+let prefix = String::from("user");
+let fetch = async || {
+    reqwest::get(format!("https://api.example.com/{prefix}")).await
+};
+let resp = fetch().await?;
+```
+
+Use `AsyncFn`, `AsyncFnMut`, `AsyncFnOnce` as trait bounds for higher-order async functions.
+
 **Rules**:
 - `tokio::spawn` for independent concurrent tasks.
 - `tokio::select!` for racing multiple futures (first one wins).
 - Never block the runtime — use `tokio::task::spawn_blocking` for CPU-bound or synchronous IO work.
 - `tokio::sync::Mutex` when holding the lock across `.await` points. `std::sync::Mutex` when the critical section is synchronous and short.
 - Channels: `mpsc` for multi-producer work queues, `oneshot` for single request-response, `broadcast` for fan-out.
+- `Future` and `IntoFuture` are in the 2024 edition prelude — no manual `use std::future::Future` needed.
 
-**Graceful shutdown**:
+**Graceful shutdown**: use `tokio_util::sync::CancellationToken` to propagate shutdown across tasks. Spawn a signal listener that cancels the token, and `select!` on the token in task loops.
 
-```rust
-use tokio::signal;
-use tokio_util::sync::CancellationToken;
-
-async fn run(config: Config) -> anyhow::Result<()> {
-    let token = CancellationToken::new();
-    let shutdown_token = token.clone();
-
-    tokio::spawn(async move {
-        signal::ctrl_c().await.expect("failed to listen for ctrl-c");
-        shutdown_token.cancel();
-    });
-
-    let server = start_server(config, token.clone());
-    let worker = run_worker(token.clone());
-
-    tokio::select! {
-        res = server => res?,
-        res = worker => res?,
-        _ = token.cancelled() => {
-            tracing::info!("shutting down gracefully");
-        }
-    }
-
-    Ok(())
-}
-```
-
-See [patterns/async-patterns.md](patterns/async-patterns.md) for channels, connection pooling, and select! patterns.
+See [patterns/async-patterns.md](patterns/async-patterns.md) for shutdown, channels, connection pooling, and select! patterns.
 
 ## Testing
 
@@ -446,7 +444,7 @@ See [crate-recommendations.md](crate-recommendations.md) for the full table (axu
 - Additive only — enabling a feature must never remove functionality.
 - Gate optional heavy dependencies behind features.
 
-**MSRV**: set `rust-version` in `[package]`. Test against it in CI.
+**MSRV**: set `rust-version` in `[package]` to your project's minimum supported stable version (check [releases.rs](https://releases.rs/) for the latest). Test against it in CI.
 
 **Release profile**:
 

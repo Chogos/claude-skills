@@ -6,7 +6,7 @@ Production-ready templates for common languages. Each uses named stages, depende
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM golang:1.23-alpine AS deps
+FROM golang:1.26-alpine AS deps
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -32,7 +32,7 @@ Key choices:
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -42,7 +42,7 @@ COPY tsconfig.json ./
 COPY src/ src/
 RUN npm run build
 
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 RUN apk add --no-cache tini
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -64,12 +64,12 @@ Key choices:
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 RUN apk add --no-cache tini
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -84,7 +84,7 @@ CMD ["node", "src/server.js"]
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim AS deps
+FROM python:3.14-slim AS deps
 WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -95,7 +95,7 @@ FROM deps AS build
 COPY . .
 RUN pip install --no-cache-dir .
 
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 COPY --from=build /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
@@ -114,7 +114,7 @@ Key choices:
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM python:3.13-slim AS build
+FROM python:3.14-slim AS build
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
@@ -122,7 +122,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 RUN uv sync --frozen --no-dev
 
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 COPY --from=build /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 WORKDIR /app
@@ -189,7 +189,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM rust:1.84-alpine AS build
+FROM rust:1.93-alpine AS build
 RUN apk add --no-cache musl-dev
 WORKDIR /app
 

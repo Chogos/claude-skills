@@ -81,6 +81,12 @@ if errors.As(err, &ve) {
 - Never `log.Fatal` or `os.Exit` in library code — only in `main`.
 - Standard pattern: `if err != nil { return ..., fmt.Errorf("context: %w", err) }`.
 - Use `errors.Join` (Go 1.20+) when aggregating multiple errors.
+- Use `errors.AsType[T]` (Go 1.26+) for generic, type-safe error extraction — no pointer variable needed:
+  ```go
+  if ve, ok := errors.AsType[*ValidationError](err); ok {
+      log.Printf("bad field: %s", ve.Field)
+  }
+  ```
 
 ## Interfaces
 
@@ -140,7 +146,16 @@ func (s *Service) Process(ctx context.Context, id string) error {
 
 Every goroutine must have a clear shutdown path. Leaked goroutines are memory leaks.
 
-**Use `errgroup.Group` for managed goroutine lifecycles:**
+**`sync.WaitGroup.Go`** (Go 1.25+) — replaces `Add(1)` + `defer Done()`:
+```go
+var wg sync.WaitGroup
+for _, item := range items {
+    wg.Go(func() { process(item) })
+}
+wg.Wait()
+```
+
+**Use `errgroup.Group` for managed goroutine lifecycles with error propagation:**
 ```go
 import "golang.org/x/sync/errgroup"
 
@@ -232,6 +247,13 @@ func TestHealthHandler(t *testing.T) {
 - Always run with `-race`: `go test -race -cover ./...`.
 - Use `t.Parallel()` in tests and subtests when there are no shared mutable resources.
 - Use `fstest.MapFS` for testing code that reads files.
+- Use `testing/synctest` (Go 1.25+) for concurrent code with virtualized time:
+  ```go
+  synctest.Test(t, func(t *testing.T) {
+      // goroutines in here use a fake clock
+      synctest.Wait() // block until all goroutines are idle
+  })
+  ```
 
 ## Build Tags
 
@@ -342,11 +364,16 @@ go mod tidy                          # after adding/removing imports
 
 - Commit both `go.mod` and `go.sum`.
 - `go.work` is for local multi-module development only — never commit it.
-- Set minimum Go version in `go.mod`:
+- Set the `go` directive to the current stable Go version (check [go.dev/dl](https://go.dev/dl/)):
   ```
-  go 1.23
-  toolchain go1.23.6
+  go 1.26
   ```
+- Track executable dependencies with `tool` directives (Go 1.24+) — replaces the `tools.go` blank-import workaround:
+  ```
+  tool golang.org/x/tools/cmd/stringer
+  tool github.com/golangci/golangci-lint/cmd/golangci-lint
+  ```
+  Install with `go install tool` or run directly with `go tool stringer`.
 
 ## Linting
 
@@ -408,11 +435,12 @@ Run: `golangci-lint run ./...`
 ## Validation loop
 
 1. `gofmt -w .` — format all files (non-negotiable)
-2. `go vet ./...` — catch common mistakes
-3. `golangci-lint run ./...` — extended static analysis
-4. `go test -race -cover ./...` — run tests with race detector
-5. `go build ./...` — verify everything compiles
-6. Repeat until all pass cleanly
+2. `go vet ./...` — catch common mistakes (includes `waitgroup` and `hostport` analyzers since Go 1.25)
+3. `go fix ./...` — apply modernizers to use current idioms (Go 1.26+)
+4. `golangci-lint run ./...` — extended static analysis
+5. `go test -race -cover ./...` — run tests with race detector
+6. `go build ./...` — verify everything compiles
+7. Repeat until all pass cleanly
 
 ## Deep-dive references
 

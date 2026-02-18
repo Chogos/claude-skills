@@ -7,8 +7,9 @@ description: Dockerfile development best practices. Use when creating, modifying
 
 ## Base Images
 
-- Pin to specific version: `FROM node:22.14-alpine3.21`. Never `latest` or untagged.
-- Pin by digest for reproducibility: `FROM node:22.14-alpine3.21@sha256:abc123...`.
+- **Always use the current stable release** when generating Dockerfiles. Don't copy version numbers from these templates — check the latest: [go.dev/dl](https://go.dev/dl/), [hub.docker.com/_/node](https://hub.docker.com/_/node/tags), [hub.docker.com/_/python](https://hub.docker.com/_/python/tags), [hub.docker.com/_/rust](https://hub.docker.com/_/rust/tags).
+- Pin to specific version: `FROM node:24.13-alpine3.21`. Never `latest` or untagged.
+- Pin by digest for reproducibility: `FROM node:24.13-alpine3.21@sha256:abc123...`.
 - Prefer minimal bases: distroless > alpine/slim > full.
   - `distroless`: no shell, no package manager — smallest attack surface, production only.
   - `alpine`: ~5MB, has shell and apk — good default for Go/Rust static binaries. Can cause issues with Python/Node/Java native modules due to musl libc.
@@ -69,7 +70,7 @@ Local layer cache doesn't persist between CI runs. Use external cache backends:
 Always multi-stage. Name every stage — never reference by index.
 
 ```dockerfile
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -79,7 +80,7 @@ COPY tsconfig.json ./
 COPY src/ src/
 RUN npm run build
 
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist

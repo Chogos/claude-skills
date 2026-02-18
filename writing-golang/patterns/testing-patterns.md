@@ -219,6 +219,43 @@ func TestConfigFromEnv(t *testing.T) {
 }
 ```
 
+## testing/synctest for Concurrent Code (Go 1.25+)
+
+Test goroutine-based code with virtualized time. Goroutines inside `synctest.Test` use a fake clock that advances instantaneously when all goroutines are blocked.
+
+```go
+func TestPeriodicRefresh(t *testing.T) {
+    synctest.Test(t, func(t *testing.T) {
+        var count atomic.Int32
+        ctx, cancel := context.WithCancel(context.Background())
+        defer cancel()
+
+        go func() {
+            ticker := time.NewTicker(10 * time.Second)
+            defer ticker.Stop()
+            for {
+                select {
+                case <-ticker.C:
+                    count.Add(1)
+                case <-ctx.Done():
+                    return
+                }
+            }
+        }()
+
+        // Advance fake clock by 30s — ticker fires 3 times
+        time.Sleep(30 * time.Second)
+        synctest.Wait() // wait for goroutine to process all ticks
+
+        if got := count.Load(); got != 3 {
+            t.Errorf("refresh count = %d, want 3", got)
+        }
+    })
+}
+```
+
+`synctest.Wait()` blocks until all goroutines in the test bubble are idle. The fake clock only advances when all goroutines are blocked on time operations.
+
 ## Benchmark Template
 
 Use `b.ResetTimer()` after expensive setup to exclude it from timing.

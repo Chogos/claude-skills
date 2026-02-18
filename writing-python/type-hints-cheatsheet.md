@@ -362,3 +362,16 @@ JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dic
 | Complex alias | `type X = ...` (3.12+) or `TypeAlias` |
 | Narrow both branches | `TypeIs` (3.13+) |
 | Immutable | `Final` |
+
+## Deferred annotations (3.14+, PEP 649)
+
+Annotations are now lazily evaluated at runtime by default. Forward references work without quotes or `from __future__ import annotations`:
+
+```python
+# Works in 3.14+ without any imports or string quotes
+class Tree:
+    left: Tree | None = None
+    right: Tree | None = None
+```
+
+`from __future__ import annotations` still works but is no longer needed for forward references. The annotations are stored as lazy thunks and evaluated on access via `typing.get_type_hints()` or `inspect.get_annotations()`.

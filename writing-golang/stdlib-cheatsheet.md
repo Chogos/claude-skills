@@ -160,6 +160,12 @@ val, ok := os.LookupEnv("DATABASE_URL")
 err := os.MkdirAll("data/cache", 0o755)
 ```
 
+**`os.OpenRoot(dir string) (*Root, error)`** (Go 1.24+) — sandboxed filesystem ops within a directory
+```go
+root, err := os.OpenRoot("/srv/data")
+f, err := root.Open("file.txt") // cannot escape /srv/data
+```
+
 ## context
 
 **`context.WithTimeout(parent, duration) (Context, CancelFunc)`** — deadline after duration
@@ -194,11 +200,7 @@ defer stop()
 ```go
 var wg sync.WaitGroup
 for _, item := range items {
-    wg.Add(1)
-    go func() {
-        defer wg.Done()
-        process(item)
-    }()
+    wg.Go(func() { process(item) }) // Go 1.25+: replaces Add(1) + defer Done()
 }
 wg.Wait()
 ```
@@ -334,6 +336,11 @@ if errors.As(err, &pe) { log.Println(pe.Path) }
 err := errors.Join(validate(a), validate(b), validate(c))
 ```
 
+**`errors.AsType[T](err error) (T, bool)`** (Go 1.26+) — generic type-safe error extraction
+```go
+if ve, ok := errors.AsType[*ValidationError](err); ok { log.Println(ve.Field) }
+```
+
 **`fmt.Errorf("...: %w", err)`** — wrap error with context
 ```go
 return fmt.Errorf("open config: %w", err)
@@ -407,4 +414,26 @@ for v := range maps.Values(m) { fmt.Println(v) }
 **`maps.Clone(m map[K]V) map[K]V`** — shallow copy
 ```go
 copy := maps.Clone(original)
+```
+
+## testing/synctest (Go 1.25+)
+
+**`synctest.Test(t, func(t *testing.T))`** — test concurrent code with virtualized time
+```go
+synctest.Test(t, func(t *testing.T) {
+    ch := make(chan int)
+    go func() { ch <- 42 }()
+    synctest.Wait()            // block until all goroutines idle
+    got := <-ch
+})
+```
+
+## new() with expressions (Go 1.26+)
+
+**`new(expr)`** — create a pointer to an initialized value
+```go
+type Config struct {
+    Timeout *time.Duration `json:"timeout"`
+}
+cfg := Config{Timeout: new(5 * time.Second)}
 ```

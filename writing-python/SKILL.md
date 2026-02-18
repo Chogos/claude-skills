@@ -35,7 +35,7 @@ Minimal `pyproject.toml`:
 [project]
 name = "my-package"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.0",
@@ -64,6 +64,7 @@ Type-hint all public function signatures — parameters and return types.
 - `X | None` over `Optional[X]`. `X | Y` over `Union[X, Y]`.
 - `type X = ...` (3.12+) for type aliases. `TypeAlias` for older Python.
 - `def f[T](x: T) -> T` (3.12+) for generic functions. `TypeVar` for older Python.
+- Annotations are lazily evaluated by default (3.14+, PEP 649) — no more `from __future__ import annotations` for forward refs.
 - `Protocol` over `ABC` — structural subtyping, no inheritance required.
 - Never use `Any` without a comment explaining why.
 
@@ -92,6 +93,7 @@ See [type-hints-cheatsheet.md](type-hints-cheatsheet.md) for the full reference.
 - `contextlib.suppress()` for intentional ignoring.
 - Never swallow exceptions silently.
 - `ExceptionGroup` + `except*` (3.11+) for handling multiple concurrent errors (from `TaskGroup`, `gather`).
+- Template strings (3.14+) for deferred/safe interpolation: `t"Hello {name}"` — returns a `Template` object, not a `str`.
 
 ```python
 class AppError(Exception):
@@ -225,7 +227,7 @@ Configure in `pyproject.toml`:
 
 ```toml
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 99
 
 [tool.ruff.lint]
@@ -241,7 +243,7 @@ select = [
 ]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -406,6 +408,7 @@ Run after every change. Fix errors in order — formatting issues often disappea
 
 ## Official references
 
+- [What's New in Python 3.14](https://docs.python.org/3/whatsnew/3.14.html) — t-strings, deferred annotations, zstd, pathlib copy/move
 - [PEP 8 — Style Guide](https://peps.python.org/pep-0008/) — naming, formatting, imports
 - [typing module docs](https://docs.python.org/3/library/typing.html) — full typing reference
 - [pytest docs](https://docs.pytest.org/en/stable/) — fixtures, parametrize, plugins, configuration

@@ -170,7 +170,9 @@ queue_messages_pending{service, queue_name}          # gauge
 queue_messages_processed_total{service, queue_name}  # counter
 ```
 
-## Distributed Tracing
+## Distributed Tracing (OpenTelemetry)
+
+Use the OpenTelemetry SDK for instrumentation — it provides auto-instrumentation for common frameworks (HTTP servers, DB clients, queue consumers) and manual span creation for custom logic. Configure an OTel Collector as the telemetry pipeline for routing, sampling, and export.
 
 ### W3C Trace Context Headers
 

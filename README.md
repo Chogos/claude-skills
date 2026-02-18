@@ -38,7 +38,7 @@ Skill directories use gerund form: `<verb>ing-<noun>` (e.g., `developing-helm-ch
 
 ### Structure constraints
 
-- **SKILL.md**: ~200-250 lines. This is the trigger file — keep it concise with progressive disclosure to pattern files.
+- **SKILL.md**:Under 500 lines. This is the trigger file — keep it concise with progressive disclosure to pattern files.
 - **Pattern files** (`patterns/*.md`): 100-250 lines each. Full examples organized by use case.
 - **Reference files** (`*.md` at skill root): Cheatsheets, matrices, lookup tables.
 

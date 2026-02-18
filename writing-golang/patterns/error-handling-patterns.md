@@ -157,6 +157,25 @@ func cleanup(db *sql.DB, f *os.File) error {
 }
 ```
 
+## Generic Error Extraction (Go 1.26+)
+
+`errors.AsType` is a generic, type-safe alternative to `errors.As` — no need to declare a pointer variable:
+
+```go
+// Before (errors.As)
+var ve *ValidationError
+if errors.As(err, &ve) {
+    log.Printf("bad field: %s", ve.Field)
+}
+
+// After (errors.AsType)
+if ve, ok := errors.AsType[*ValidationError](err); ok {
+    log.Printf("bad field: %s", ve.Field)
+}
+```
+
+Works through wrapping chains just like `errors.As`.
+
 ## HTTP Error Response Mapping
 
 Map domain errors to HTTP status codes in one place. Keep domain packages free of HTTP concerns.

@@ -120,7 +120,7 @@ docker buildx build --platform linux/arm64 -t myapp:arm64 .
 
 In the Dockerfile, use `TARGETPLATFORM`, `TARGETOS`, `TARGETARCH` build args (automatically set by BuildKit):
 ```dockerfile
-FROM --platform=$BUILDPLATFORM golang:1.23 AS build
+FROM --platform=$BUILDPLATFORM golang:1.26 AS build
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /app
 ```

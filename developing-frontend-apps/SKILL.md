@@ -112,6 +112,28 @@ description: Frontend application development best practices. Use when building,
   }
   ```
 - **Performant animations**. Animate only `transform` and `opacity` — they run on the compositor thread, avoiding layout/paint. Use `will-change` sparingly and remove after animation completes.
+- **CSS Nesting**. Native nesting without preprocessors. Nest related selectors to co-locate styles:
+  ```css
+  .card {
+    padding: var(--space-md);
+    & .title { font-weight: 700; }
+    &:hover { box-shadow: 0 2px 8px oklch(0% 0 0 / 0.1); }
+    @media (min-width: 768px) { padding: var(--space-lg); }
+  }
+  ```
+- **Container Queries**. Size components based on their container, not the viewport — essential for reusable components:
+  ```css
+  .card-container { container-type: inline-size; }
+  @container (min-width: 400px) {
+    .card { grid-template-columns: 1fr 2fr; }
+  }
+  ```
+- **Popover API**. Declarative popovers without JavaScript — handles dismiss-on-outside-click, top-layer stacking, and focus management:
+  ```html
+  <button popovertarget="menu">Open</button>
+  <div id="menu" popover>Popover content</div>
+  ```
+- **View Transitions API**. Animated transitions between DOM states or pages with `document.startViewTransition()`. Pair with `view-transition-name` CSS property to animate specific elements between states.
 
 ## TypeScript for Frontend
 

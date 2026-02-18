@@ -5,13 +5,13 @@ Per-instruction cheatsheet focused on gotchas and non-obvious behavior.
 ## FROM
 
 ```dockerfile
-FROM --platform=linux/amd64 node:22-alpine AS builder
+FROM --platform=linux/amd64 node:24-alpine AS builder
 ```
 
 - `--platform` pins the architecture. Required for consistent cross-platform builds.
 - `ARG` before `FROM` is the only instruction allowed before `FROM`. Its scope ends at the `FROM` line:
   ```dockerfile
-  ARG VERSION=3.13
+  ARG VERSION=3.14
   FROM python:${VERSION}-slim
   ARG VERSION  # must re-declare to use in this stage (value inherited)
   ```
@@ -82,7 +82,7 @@ Gotcha: heredoc lines run independently. Without `set -e`, a failing line doesn'
 
 ```dockerfile
 ARG VERSION=latest
-FROM node:${VERSION}
+FROM node:${NODE_VERSION}
 ARG BUILD_DATE  # must re-declare after FROM
 ```
 

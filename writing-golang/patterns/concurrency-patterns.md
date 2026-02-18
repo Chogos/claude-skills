@@ -1,5 +1,29 @@
 # Concurrency Patterns
 
+## WaitGroup.Go (Go 1.25+)
+
+Replaces the `Add(1)` + `defer Done()` boilerplate:
+
+```go
+var wg sync.WaitGroup
+for _, item := range items {
+    wg.Go(func() {
+        process(item)
+    })
+}
+wg.Wait()
+```
+
+Combine with `errgroup` when you need error propagation or context cancellation.
+
+## Container-Aware GOMAXPROCS (Go 1.25+)
+
+The runtime automatically respects cgroup CPU bandwidth limits on Linux. No manual configuration or third-party libraries (like `automaxprocs`) needed.
+
+- Automatically adjusts if limits change at runtime.
+- Disable with `GODEBUG=containermaxprocs=0`.
+- Override with `runtime.SetDefaultGOMAXPROCS()` (Go 1.25+) to reset to the runtime default.
+
 ## Goroutine with Context Cancellation
 
 Every goroutine must select on `ctx.Done()` to support clean shutdown.
