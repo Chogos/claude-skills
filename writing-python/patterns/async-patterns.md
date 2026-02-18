@@ -55,6 +55,16 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+## Choosing a concurrency strategy
+
+| Strategy | Use when | Cancellation | Error handling |
+|----------|----------|--------------|----------------|
+| `TaskGroup` | Structured concurrent work, all-or-nothing | Cancels siblings on first error | `ExceptionGroup` with `except*` |
+| `gather()` | Need all results even if some fail | `return_exceptions=True` collects errors | Mixed results/exceptions in list |
+| `create_task()` | Fire-and-forget, manual lifecycle | Manual cancellation | Must `await` or check later |
+
+**Default to `TaskGroup`** (3.11+) — it prevents orphaned tasks and propagates errors cleanly. Use `gather(return_exceptions=True)` when you need partial results from failing tasks. Use bare `create_task()` only for background work with independent lifecycles.
+
 ## TaskGroup — structured concurrency (3.11+)
 
 `TaskGroup` guarantees all tasks complete (or cancel) before leaving the `async with` block. Exceptions propagate as `ExceptionGroup`.

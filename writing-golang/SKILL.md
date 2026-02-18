@@ -232,6 +232,36 @@ func TestHealthHandler(t *testing.T) {
 - Use `t.Parallel()` in tests and subtests when there are no shared mutable resources.
 - Use `fstest.MapFS` for testing code that reads files.
 
+## Build Tags
+
+Use `//go:build` (Go 1.17+, replaces `// +build`) for conditional compilation:
+
+```go
+//go:build linux
+
+package myapp
+// This file is only compiled on Linux
+```
+
+Common patterns:
+```go
+//go:build integration        // only in: go test -tags=integration ./...
+//go:build !windows            // all platforms except Windows
+//go:build linux && amd64      // Linux on x86-64 only
+```
+
+Name files with platform suffix for automatic build tags: `file_linux.go`, `file_darwin.go`, `file_test.go`.
+
+## Range Over Integers (Go 1.22+)
+
+```go
+for i := range 10 {
+    fmt.Println(i) // 0, 1, 2, ..., 9
+}
+```
+
+Replaces `for i := 0; i < 10; i++` for simple counted loops.
+
 ## Modules
 
 ```bash

@@ -7,7 +7,7 @@ description: Rego policy development best practices for OPA. Use when writing, m
 
 ## Core Conventions
 
-- Always use `import rego.v1` (OPA v0.59.0+) for modern Rego features.
+- Always use `import rego.v1` (OPA v0.59.0+) for modern Rego features. For OPA < v0.59.0, use `import future.keywords` instead.
 - Always use `opa fmt` for consistent formatting.
 - Use `opa check --strict` in build pipelines.
 - Prioritize clear code over assumed performance optimizations — OPA handles optimization.
@@ -105,6 +105,36 @@ Use metadata annotations:
   allow if user.is_admin
   ```
 - Don't import from `input` — keep the data source obvious.
+
+## Debugging
+
+### print() for trace output
+
+```rego
+allow if {
+    print("user:", input.user, "roles:", input.user.roles)
+    "admin" in input.user.roles
+}
+```
+
+`print()` writes to stderr during `opa eval` and `opa test -v`. Remove before production.
+
+### opa eval with explain
+
+```bash
+# Show full evaluation trace
+opa eval --data policy.rego --input input.json "data.authz.allow" --explain=full
+
+# Format output for readability
+opa eval --data policy.rego --input input.json "data.authz.allow" --format=pretty
+```
+
+### Common reasons for unexpected undefined
+
+1. **Missing input field** — `input.user.role` is undefined when `input.user` doesn't exist. Guard with `input.user` check first or use default values.
+2. **Typo in field name** — Rego doesn't error on missing fields, just returns undefined. Use `opa check --strict` to catch unused variables.
+3. **Type mismatch** — comparing string `"80"` to number `80` silently fails. Use `to_number()` or ensure consistent types.
+4. **Negation on undefined** — `not x` is true when `x` is undefined AND when `x` is false. Be explicit about what you're negating.
 
 ## New policy workflow
 

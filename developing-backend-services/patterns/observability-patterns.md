@@ -243,6 +243,28 @@ function get_user(user_id):
 
 Create a span for every external call: HTTP requests, database queries, cache lookups, queue publishes, file I/O. Internal function calls generally don't need spans unless they represent significant processing.
 
+### Sampling Strategies
+
+At high volume, tracing every request is expensive. Use sampling to balance observability with cost.
+
+**Head-based sampling** — decide at trace start whether to sample:
+
+- Simplest approach. Set a fixed rate (e.g., 10% of requests).
+- Downside: may miss rare errors if they fall outside the sample.
+
+**Tail-based sampling** — decide after the trace completes:
+
+- Sample 100% of errors and high-latency requests, plus a percentage of successes.
+- Requires a trace collector (OpenTelemetry Collector with `tail_sampling` processor).
+- More expensive to run, but catches all interesting traces.
+
+**Rules of thumb**:
+
+- Always sample 100% of errors (`status_code >= 500`).
+- Always sample 100% of traces above latency threshold (e.g., p99).
+- Sample a fixed percentage (1-10%) of successful requests for baseline visibility.
+- Low-traffic services: sample 100%. High-traffic (>10K req/s): tail-based or 1-5% head-based.
+
 ## Alerting Rules
 
 Alert on symptoms (user impact), not causes (CPU high). SLO-based alerting reduces noise.

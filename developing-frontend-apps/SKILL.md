@@ -44,6 +44,12 @@ description: Frontend application development best practices. Use when building,
     [items, activeFilter]
   );
   ```
+- **Global state libraries** (when context isn't enough):
+  - **Zustand** — minimal API, great for simple global state (auth, UI toggles). No boilerplate.
+  - **Jotai** — atomic state, bottom-up approach. Good for independent pieces of state that compose.
+  - **Redux Toolkit** — full-featured, middleware, devtools. Use for complex state with many interdependent slices.
+  - Pick Zustand by default. Reach for Redux Toolkit only when you need middleware, time-travel debugging, or complex normalized state.
+- **Forms**: use React Hook Form or TanStack Form for multi-field forms with validation. Manual `useState` per field doesn't scale past 3-4 fields — validation, dirty tracking, and error display become unwieldy.
 - **Immutable updates**. Spread or `structuredClone` — never mutate state directly.
 - **URL as state**. Search params, filters, pagination belong in the URL for shareability and back-button support.
 
@@ -155,6 +161,7 @@ description: Frontend application development best practices. Use when building,
 - **Tokens**. Store in `httpOnly` cookies, not `localStorage`. `localStorage` is readable by any script on the page.
 - **Dependencies**. Run `npm audit` regularly. Use `npm audit --omit=dev` for production deps. Automate with Dependabot or Renovate.
 - **SRI**. Add `integrity` attribute to CDN `<script>` and `<link>` tags.
+- **Error monitoring**. Use Sentry or Datadog RUM to capture client-side errors in production. Configure source maps for readable stack traces.
 
 ## Build Tooling
 

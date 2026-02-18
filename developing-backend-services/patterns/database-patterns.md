@@ -67,9 +67,7 @@ Never drop a column that running code still references — deploy code changes f
 
 ### Sizing
 
-Formula: `pool_size = (2 * cpu_cores) + disk_spindles`
-
-For cloud databases (SSD-backed): `pool_size = (2 * cpu_cores) + 1`, typically 10-20 per application instance.
+Starting point: `pool_size = (2 * cpu_cores) + 1`, typically 10-20 per application instance. Tune based on actual connection wait times — not a formula.
 
 Total connections across all instances must not exceed the database's `max_connections`. With 5 instances at pool size 20, you need at least 100 `max_connections` on the DB (leave headroom for admin connections).
 

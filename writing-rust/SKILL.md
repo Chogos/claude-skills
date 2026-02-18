@@ -245,6 +245,20 @@ impl From<Config> for Settings {
 
 See [trait-cheatsheet.md](trait-cheatsheet.md) for derive-vs-manual guidance per trait.
 
+## Concurrency vs Parallelism
+
+- **tokio** — async I/O concurrency (network, disk, timers). Use for servers, HTTP clients, database queries.
+- **rayon** — CPU-bound data parallelism. Use for batch processing, image manipulation, number crunching:
+  ```rust
+  use rayon::prelude::*;
+
+  let results: Vec<Output> = inputs
+      .par_iter()        // parallel iterator
+      .map(|item| expensive_computation(item))
+      .collect();
+  ```
+- Never mix blocking CPU work into the tokio runtime — it starves async tasks. Use `tokio::task::spawn_blocking` or rayon's thread pool.
+
 ## Async (tokio)
 
 Use `#[tokio::main]` for the entry point. Configure flavor and worker threads only when needed:

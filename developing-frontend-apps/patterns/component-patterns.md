@@ -379,3 +379,56 @@ Usage — clean, declarative API:
   <Tabs.Panel id="settings"><SettingsContent /></Tabs.Panel>
 </Tabs>
 ```
+
+## Internationalization (i18n)
+
+Use `react-i18next` (most popular) or `react-intl` (ICU message format).
+
+### Setup with react-i18next
+
+```tsx
+// i18n.ts
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import Backend from 'i18next-http-backend';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
+i18n
+  .use(Backend)            // load translations from /locales/{lng}/{ns}.json
+  .use(LanguageDetector)   // detect user language
+  .use(initReactI18next)
+  .init({
+    fallbackLng: 'en',
+    ns: ['common', 'auth', 'dashboard'],
+    defaultNS: 'common',
+    interpolation: { escapeValue: false }, // React handles XSS
+  });
+```
+
+### Usage in components
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function OrderSummary({ count, total }: { count: number; total: number }) {
+  const { t } = useTranslation('orders');
+  return (
+    <p>{t('summary', { count, total: total.toFixed(2) })}</p>
+  );
+}
+```
+
+```json
+// locales/en/orders.json
+{
+  "summary_one": "{{count}} item — ${{total}}",
+  "summary_other": "{{count}} items — ${{total}}"
+}
+```
+
+### Guidelines
+
+- Keep translation keys semantic (`auth.login_button`), not tied to English text.
+- Use ICU pluralization for counts — don't build plural logic in code.
+- Extract translations with `i18next-parser` in CI to catch missing keys.
+- Load translations lazily per namespace to avoid bloating the initial bundle.

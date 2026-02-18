@@ -9,10 +9,10 @@ description: Dockerfile development best practices. Use when creating, modifying
 
 - Pin to specific version: `FROM node:22.14-alpine3.21`. Never `latest` or untagged.
 - Pin by digest for reproducibility: `FROM node:22.14-alpine3.21@sha256:abc123...`.
-- Prefer minimal bases: distroless > alpine > slim > full.
+- Prefer minimal bases: distroless > alpine/slim > full.
   - `distroless`: no shell, no package manager — smallest attack surface, production only.
-  - `alpine`: ~5MB, has shell and apk — good default for most workloads.
-  - `slim`: ~70MB Debian with minimal packages — when you need glibc.
+  - `alpine`: ~5MB, has shell and apk — good default for Go/Rust static binaries. Can cause issues with Python/Node/Java native modules due to musl libc.
+  - `slim`: ~70MB Debian with minimal packages — preferred for Python, Node.js, Java (glibc compatibility).
 - Cross-architecture: `FROM --platform=linux/amd64 image:tag`.
 
 ## Layer Ordering & Caching
@@ -98,7 +98,7 @@ CMD ["node", "dist/server.js"]
 
 ## .dockerignore
 
-Always create one. Without it, the entire directory (`.git`, `node_modules`, local env) goes into the build context.
+Always create one. Without it, the entire directory (`.git`, `node_modules`, local env) goes into the build context — on large repos this can send GBs to the daemon and dramatically slow builds.
 
 ```
 .git

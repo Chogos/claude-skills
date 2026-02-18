@@ -37,6 +37,32 @@ Size comparison for a Go binary:
 
 `scratch` is even smaller but has no CA certificates, timezone data, or `/etc/passwd`. Distroless includes these.
 
+### Health checks for distroless
+
+Distroless has no `curl` or shell. Options:
+
+**Option 1** — Build health check into the application (preferred):
+```go
+// Expose /healthz in your app, let the orchestrator (K8s liveness probe) call it
+http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+})
+```
+
+**Option 2** — Compile a static health check binary in the build stage:
+```dockerfile
+FROM golang:1.23-alpine AS healthcheck
+RUN CGO_ENABLED=0 go install github.com/grpc-ecosystem/grpc-health-probe@latest
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=healthcheck /go/bin/grpc-health-probe /usr/local/bin/
+COPY --from=build /app /app
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD ["/usr/local/bin/grpc-health-probe", "-addr=:8080"]
+```
+
+For Kubernetes: skip `HEALTHCHECK` entirely and use `httpGet`/`tcpSocket`/`grpc` liveness probes in the pod spec instead.
+
 ## BuildKit secrets
 
 Mount secrets at build time without baking them into image layers.

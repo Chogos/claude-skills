@@ -116,6 +116,57 @@ description: Helm chart development best practices. Use when creating, modifying
 5. Security scan with `checkov` or `kube-score`
 6. `ct lint` (chart-testing) for CI-level validation
 
+## Chart Testing
+
+- **Local rendering**: `helm template mychart/ --values values.yaml` — verify output without a cluster.
+- **Unit tests**: `helm-unittest` for assertion-based template tests. Place in `templates/tests/`:
+  ```yaml
+  # templates/tests/deployment_test.yaml
+  suite: deployment
+  tests:
+    - it: should set replicas from values
+      set:
+        replicaCount: 3
+      asserts:
+        - equal:
+            path: spec.replicas
+            value: 3
+    - it: should use the correct image
+      asserts:
+        - matchRegex:
+            path: spec.template.spec.containers[0].image
+            pattern: ^my-app:.*
+  ```
+- **CI validation**: `ct lint` (chart-testing) combines lint + install in a kind cluster. Use in CI pipelines.
+- **Security scan**: `kube-score` or `checkov` on rendered templates.
+
+## Hooks Lifecycle
+
+Hooks execute at specific release lifecycle points. Annotate resources (never use labels):
+
+| Hook | Runs | Use case |
+|------|------|----------|
+| `pre-install` | Before first install | DB migration, pre-flight checks |
+| `post-install` | After first install | Seed data, notifications |
+| `pre-upgrade` | Before upgrade | DB migration, backup |
+| `post-upgrade` | After upgrade | Cache warm-up, smoke test |
+| `pre-delete` | Before delete | Backup, cleanup external resources |
+| `pre-rollback` | Before rollback | Snapshot current state |
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "mychart.fullname" . }}-migrate
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+```
+
+- **hook-weight**: lower runs first (string, e.g., `"-5"`, `"0"`, `"10"`).
+- **hook-delete-policy**: `before-hook-creation` (delete previous hook resource before creating new), `hook-succeeded` (delete after success), `hook-failed` (delete after failure).
+
 ## Versioning & CI
 
 - Semantic versioning. Increment chart version for any change.

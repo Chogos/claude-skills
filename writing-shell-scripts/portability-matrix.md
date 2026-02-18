@@ -29,7 +29,7 @@ python3 -c "from datetime import datetime; print(datetime.now().isoformat())"
 |-------------|-------------|----------|
 | `readlink -f path` | `readlink path` (no `-f`) | See below |
 
-BSD `readlink` doesn't resolve recursively. Portable alternative:
+BSD `readlink` on macOS 12.3+ supports `-f`. For older macOS versions:
 ```bash
 resolve_path() {
     cd "$(dirname "$1")" && pwd -P
@@ -100,6 +100,40 @@ python3 -c "import os; print(int(os.path.getmtime('file')))"
 | `cp --archive` | `cp -a` (same) |
 | `cp --parents` | Not supported |
 | `cp -t dir/` | Not supported |
+
+## sort — version sorting and flags
+
+| GNU (Linux) | BSD (macOS) | Portable |
+|---|---|---|
+| `sort --version-sort` | Not supported | `sort -t. -k1,1n -k2,2n -k3,3n` |
+| `sort -h` (human-numeric) | Not supported | Parse units manually |
+| `sort -V` | Not supported | Same as `--version-sort` |
+
+## tar — archive flags
+
+| GNU (Linux) | BSD (macOS) |
+|---|---|
+| `tar --exclude='*.log'` | `tar --exclude '*.log'` (same, but no `=`) |
+| `tar -czf out.tar.gz dir/` | `tar -czf out.tar.gz dir/` |
+| `tar --wildcards '*.txt'` | Not supported (wildcards work by default) |
+
+Portable: always use short flags. Avoid `--wildcards` and `--transform`.
+
+## find — regex support
+
+| GNU (Linux) | BSD (macOS) | Portable |
+|---|---|---|
+| `find . -regex '.*\.sh'` | `find . -regex '.*\.sh'` (different default regex type) | `find . -name '*.sh'` |
+| `find . -regextype posix-extended -regex ...` | `find -E . -regex ...` | Use `-name`/`-path` when possible |
+
+## cut — delimiter handling
+
+| GNU (Linux) | BSD (macOS) |
+|---|---|
+| `cut -d$'\t' -f1` | `cut -d'	' -f1` (literal tab) |
+| `cut --complement -f2` | `cut -f1,3-` (manual complement) |
+
+Portable: use `awk -F'\t' '{print $1}'` for complex field extraction.
 
 ## General portability rules
 

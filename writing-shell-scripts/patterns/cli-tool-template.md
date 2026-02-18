@@ -174,3 +174,30 @@ main "$@"
 - **Dry-run support** — `--dry-run` flag skips side effects
 - **Temp directory** not temp file — `mktemp -d` gives a workspace; cleanup removes the whole tree
 - **`source` for config** — simple but only safe for trusted config files; use `read`-based parsing for untrusted input
+
+## Alternative: getopts for short options only
+
+When you only need short flags and POSIX portability matters more than long options:
+
+```bash
+parse_args() {
+    while getopts ":c:l:nvh" opt; do
+        case "$opt" in
+            c) CONFIG_FILE="$OPTARG" ;;
+            l) LOG_FILE="$OPTARG" ;;
+            n) DRY_RUN=1 ;;
+            v) VERBOSE=1 ;;
+            h) usage; exit 0 ;;
+            :) die "option -$OPTARG requires a value" ;;
+            *) die "unknown option: -$OPTARG (use -h for usage)" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    [[ $# -ge 1 ]] || { usage >&2; die "missing required argument: target"; }
+    TARGET="$1"
+    readonly TARGET
+}
+```
+
+Trade-offs: `getopts` is built-in and POSIX-compliant, but doesn't support long options (`--config`). The manual `while/case` approach in the main template supports both.

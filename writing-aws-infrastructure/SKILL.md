@@ -289,12 +289,15 @@ ordersTable.grantReadWriteData(processOrder);
 ## Cost Optimization
 
 - **Tagging**: every resource must have `Project`, `Environment`, `Owner`. Use tag policies in AWS Organizations.
+- **Cost visibility**: enable Cost Explorer, set up AWS Budgets with alerts at 80%/100% of expected spend. Use Trusted Advisor for idle resource detection.
+- **Right-sizing**: use Compute Optimizer recommendations for EC2, Lambda, and ECS. Review monthly — workloads change.
 - **S3**: lifecycle rules to transition to IA at 30 days, Glacier at 90. Enable Intelligent-Tiering for unpredictable access patterns.
 - **Lambda**: right-size memory with Power Tuning. Use ARM (`arm64`) for ~20% cost reduction. Minimize cold starts to reduce wasted execution time.
 - **Fargate Spot**: use for fault-tolerant workloads (queue processors, batch jobs). Not for user-facing services.
 - **NAT Gateway**: $0.045/hr per gateway. Consolidate to one for non-prod. Use VPC endpoints to reduce NAT traffic for AWS service calls.
 - **VPC endpoints**: gateway endpoints (S3, DynamoDB) are free — always enable. Interface endpoints are ~$7/mo per AZ — cost-effective when they replace significant NAT traffic.
-- **Reserved capacity**: Savings Plans for predictable Lambda/Fargate usage.
+- **Reserved capacity**: Savings Plans for predictable Lambda/Fargate usage. Compute Savings Plans are more flexible than EC2 Reserved Instances.
+- **Database**: use Aurora Serverless v2 for variable workloads. DynamoDB on-demand for unpredictable traffic, provisioned + auto-scaling once patterns stabilize.
 
 ## Encryption
 
@@ -347,6 +350,8 @@ ordersTable.grantReadWriteData(processOrder);
 - **IAM patterns**: See [patterns/iam-patterns.md](patterns/iam-patterns.md) for scoped roles, cross-account access, permission boundaries, condition keys
 - **Serverless patterns**: See [patterns/serverless-patterns.md](patterns/serverless-patterns.md) for Lambda + API Gateway, SQS, EventBridge, Step Functions, Powertools
 - **Networking patterns**: See [patterns/networking-patterns.md](patterns/networking-patterns.md) for VPC layouts, security group chains, VPC endpoints, transit gateway
+- **Database patterns**: See [patterns/database-patterns.md](patterns/database-patterns.md) for RDS, Aurora, DynamoDB, ElastiCache best practices
+- **Monitoring patterns**: See [patterns/monitoring-patterns.md](patterns/monitoring-patterns.md) for CloudWatch alarms, dashboards, CloudTrail, Config, alerting
 - **Service limits**: See [service-limits-cheatsheet.md](service-limits-cheatsheet.md) for default quotas across Lambda, S3, IAM, VPC, ECS, CloudFormation
 
 ## Official references

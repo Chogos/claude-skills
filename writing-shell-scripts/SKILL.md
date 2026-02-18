@@ -96,11 +96,79 @@ die()       { log_error "$@"; exit 1; }
 
 - Use `(( ))` or `$(( ))` for math. Never `let`, `$[ ]`, or `expr`.
 
+## String Manipulation
+
+Use parameter expansion — no need for `sed`/`awk` on simple transformations:
+
+```bash
+file="/path/to/config.tar.gz"
+"${file#*/}"       # path/to/config.tar.gz  (remove shortest prefix match)
+"${file##*/}"      # config.tar.gz          (remove longest prefix match)
+"${file%.*}"       # /path/to/config.tar    (remove shortest suffix match)
+"${file%%.*}"      # /path/to/config        (remove longest suffix match)
+"${file/tar/zip}"  # /path/to/config.zip.gz (first substitution)
+"${file//o/0}"     # /path/t0/c0nfig.tar.gz (all substitutions)
+```
+
+Defaults and guards:
+```bash
+"${1:-default}"    # use default if $1 is unset or empty
+"${1:?error msg}"  # exit with error if $1 is unset or empty
+"${var:+alt}"      # use alt if var is set and non-empty, else empty
+```
+
+## Arrays
+
+```bash
+# Indexed arrays
+files=("one.txt" "two.txt" "three.txt")
+files+=("four.txt")             # append
+echo "${files[0]}"              # first element
+echo "${files[@]}"              # all elements (preserves quoting)
+echo "${#files[@]}"             # length
+
+# Iterate safely (handles spaces in elements)
+for f in "${files[@]}"; do
+    process "$f"
+done
+
+# Associative arrays (bash 4+)
+declare -A config
+config[host]="localhost"
+config[port]="5432"
+for key in "${!config[@]}"; do
+    echo "$key=${config[$key]}"
+done
+```
+
 ## Security
 
 - Validate all user inputs. Use `--` to separate options from arguments.
 - Avoid `eval`. Secure permissions (`chmod 600`) for sensitive files.
 - SUID/SGID forbidden on shell scripts — use `sudo` instead.
+- Use `mktemp` for temp files — never hardcode `/tmp/myfile`:
+  ```bash
+  TEMP_DIR="$(mktemp -d)" || die "failed to create temp dir"
+  ```
+
+## ShellCheck
+
+Run `shellcheck` on every script. Fix all warnings — don't suppress without justification.
+
+```bash
+# Suppress a specific rule with an explanation
+# shellcheck disable=SC2086  # word splitting intended for $flags
+docker run $flags "$image"
+
+# Suppress for an entire file (top of file, after shebang)
+# shellcheck disable=SC2034  # variables sourced by another script
+
+# Source directive for files shellcheck can't find
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+```
+
+Rule ranges: SC1xxx = syntax/parsing, SC2xxx = best practices, SC3xxx = POSIX compatibility.
 
 ## Portability
 

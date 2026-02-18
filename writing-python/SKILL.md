@@ -281,6 +281,40 @@ def test_api_key_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 See [patterns/testing-patterns.md](patterns/testing-patterns.md) for advanced patterns.
 
+## Logging
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+```
+
+- Use `logging.getLogger(__name__)` in every module — never the root logger.
+- Configure once at application startup, not in libraries:
+  ```python
+  logging.basicConfig(
+      level=logging.INFO,
+      format="%(asctime)s %(levelname)s %(name)s %(message)s",
+  )
+  ```
+- For JSON structured logging (production), use `structlog`:
+  ```python
+  import structlog
+
+  structlog.configure(
+      processors=[
+          structlog.stdlib.add_log_level,
+          structlog.processors.TimeStamper(fmt="iso"),
+          structlog.processors.JSONRenderer(),
+      ],
+      wrapper_class=structlog.stdlib.BoundLogger,
+  )
+  log = structlog.get_logger()
+  log.info("order_created", order_id="abc123", total=42.50)
+  ```
+- Levels: `DEBUG` for development tracing, `INFO` for business events, `WARNING` for recoverable issues, `ERROR` for failures needing attention.
+- Never log secrets, tokens, passwords, or PII.
+
 ## Async (asyncio)
 
 - `async def` for I/O-bound operations (HTTP, DB, file, network).
@@ -288,7 +322,11 @@ See [patterns/testing-patterns.md](patterns/testing-patterns.md) for advanced pa
 - `asyncio.TaskGroup` (3.11+) for structured concurrency — exceptions propagate cleanly.
 - `async with` for resource management (sessions, connections).
 - `asyncio.to_thread()` to offload blocking/sync code.
-- `pytest-asyncio` for async tests.
+- `pytest-asyncio` for async tests. Requires `asyncio_mode = "auto"` in `pyproject.toml` since 0.23+:
+  ```toml
+  [tool.pytest-asyncio]
+  asyncio_mode = "auto"
+  ```
 
 ```python
 import asyncio

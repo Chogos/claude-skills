@@ -71,7 +71,7 @@ See [twelve-factor-cheatsheet.md](twelve-factor-cheatsheet.md) for the full twel
   002_add_email_index.sql
   003_create_orders.sql
   ```
-- **Connection pooling**: size pool to `(2 * CPU cores) + disk spindles` (typically 10-20 per instance). Set connection timeout (5s), idle timeout (10min), max lifetime (30min).
+- **Connection pooling**: size pool to `(2 * CPU cores) + 1` (typically 10-20 per instance). Tune based on actual wait times — not a formula. Set connection timeout (5s), idle timeout (10min), max lifetime (30min).
 - **Transactions**: keep short — lock contention grows with duration. Use read-only transactions for queries. Retry on serialization failures (SQLSTATE 40001). Prefer optimistic locking (`WHERE version = ?` + increment) over pessimistic locks.
 - **Queries**: parameterized always — no string concatenation, no exceptions. Add indexes for WHERE/JOIN/ORDER BY columns. Run `EXPLAIN ANALYZE` on slow queries. Watch for N+1 patterns in ORMs.
 

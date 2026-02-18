@@ -22,6 +22,8 @@ image:
 
 `latest`, `head`, `canary` — any mutable tag means deployments aren't reproducible.
 
+**Fix for existing charts**: update `values.yaml` default to a pinned version. Add CI check that rejects `latest`/`HEAD` tags. For digest pinning, use `crane digest` to resolve and pin automatically.
+
 ## Missing resource limits
 
 Bad:
@@ -45,6 +47,8 @@ containers:
         cpu: 500m
         memory: 256Mi
 ```
+
+**Fix for existing charts**: audit with `helm template | grep -A5 resources:`. Add default requests/limits in `values.yaml`. Use `kube-score` or `checkov` in CI to enforce resource requirements.
 
 ## Label selector drift
 
@@ -72,6 +76,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 ```
 
 Both Deployment and Service use `{{ include "my-app.selectorLabels" . }}`.
+
+**Fix for existing charts**: create a `selectorLabels` helper in `_helpers.tpl`. Update all Deployment selectors and Service selectors to use it. Note: changing Deployment `selector.matchLabels` requires deleting and recreating the Deployment (selectors are immutable).
 
 ## Hardcoded secrets in values
 
@@ -111,6 +117,8 @@ app:
 ```
 
 `--set app.server.http.listener.port=9090` is painful. Flatten unless grouping is meaningful.
+
+**Fix for existing charts**: flatten values and update templates. Provide a migration note in the chart's CHANGELOG if this is a breaking change (it changes `--set` paths).
 
 Good:
 ```yaml

@@ -47,15 +47,24 @@ async fn run(config: Config) -> Result<()> {
     let token = CancellationToken::new();
 
     // Spawn the signal listener
+    // Note: signal::unix is Unix-only. For cross-platform, use only ctrl_c().
     let shutdown_token = token.clone();
     tokio::spawn(async move {
-        let ctrl_c = signal::ctrl_c();
-        let mut sigterm = signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to register SIGTERM handler");
+        #[cfg(unix)]
+        {
+            let ctrl_c = signal::ctrl_c();
+            let mut sigterm = signal::unix::signal(signal::unix::SignalKind::terminate())
+                .expect("failed to register SIGTERM handler");
 
-        tokio::select! {
-            _ = ctrl_c => info!("received SIGINT"),
-            _ = sigterm.recv() => info!("received SIGTERM"),
+            tokio::select! {
+                _ = ctrl_c => info!("received SIGINT"),
+                _ = sigterm.recv() => info!("received SIGTERM"),
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            signal::ctrl_c().await.expect("failed to listen for Ctrl+C");
+            info!("received Ctrl+C");
         }
         shutdown_token.cancel();
     });
@@ -297,6 +306,56 @@ async fn compress_data(data: Vec<u8>) -> Result<Vec<u8>> {
     .await?
 }
 ```
+
+## Common async pitfalls
+
+### Holding MutexGuard across .await
+
+```rust
+// BAD: MutexGuard held across await — blocks the runtime thread
+let guard = mutex.lock().await;
+do_async_work().await; // other tasks can't acquire the lock
+drop(guard);
+
+// GOOD: clone data out, drop guard, then await
+let data = {
+    let guard = mutex.lock().await;
+    guard.clone()
+};
+do_async_work_with(data).await;
+```
+
+Use `tokio::sync::Mutex` only when you need to hold the lock across `.await` (rare). For synchronous critical sections within async code, `std::sync::Mutex` is faster.
+
+### Forgetting .await
+
+Calling an async function without `.await` returns an inert `Future` — no work happens. The compiler warns about unused `Future` values, but the warning is easy to miss in a chain:
+
+```rust
+// BAD: silently does nothing
+async fn save(data: &Data) -> Result<()> { /* ... */ }
+save(&data); // compiles, runs nothing
+
+// GOOD
+save(&data).await?;
+```
+
+### Cancellation safety with select
+
+When `select!` picks a winner, it drops all other futures.
+
+Safe operations:
+
+- `mpsc::Receiver::recv()` — un-received messages stay in the channel
+- `tokio::time::sleep()` — stateless
+- `CancellationToken::cancelled()` — idempotent
+
+Unsafe to cancel:
+
+- Reading from a `TcpStream` (partial data consumed and lost)
+- Multi-step operations without checkpointing
+
+When in doubt, use `tokio::pin!` and `&mut future` to resume rather than restart.
 
 ## Rate limiting with semaphore
 
