@@ -1,15 +1,21 @@
 # claude-skills
 
-Claude Code skills for infrastructure and scripting best practices.
+Claude Code skills for infrastructure, languages, and development best practices.
 
 ## Skills
 
-| Skill                    | Description                                          |
-| ------------------------ | ---------------------------------------------------- |
-| `developing-helm-charts` | Helm chart conventions, security, values design      |
-| `writing-rego-policies`  | OPA/Rego policy rules, testing, Kubernetes admission |
-| `writing-dockerfiles`    | Dockerfile conventions, multi-stage builds, security |
-| `writing-shell-scripts`  | Bash scripting, CLI tools, deployment scripts        |
+| Skill                         | Description                                              |
+| ----------------------------- | -------------------------------------------------------- |
+| `developing-backend-services` | API design, database patterns, observability, 12-factor  |
+| `developing-frontend-apps`    | Component architecture, performance, accessibility       |
+| `developing-helm-charts`      | Helm chart conventions, security, values design          |
+| `writing-aws-infrastructure`  | IAM, CloudFormation/CDK, VPC, Lambda, ECS, cost          |
+| `writing-dockerfiles`         | Dockerfile conventions, multi-stage builds, security     |
+| `writing-golang`              | Go project layout, error handling, concurrency, testing  |
+| `writing-python`              | Python project structure, type hints, pytest, async      |
+| `writing-rego-policies`       | OPA/Rego policy rules, testing, Kubernetes admission     |
+| `writing-rust`                | Rust ownership, error handling, async, traits, testing   |
+| `writing-shell-scripts`       | Bash scripting, CLI tools, deployment scripts            |
 
 ## Structure
 
