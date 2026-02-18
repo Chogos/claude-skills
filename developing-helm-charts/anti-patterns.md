@@ -190,6 +190,28 @@ annotations:
 
 Helm hooks are always annotations, never labels.
 
+## Missing values.schema.json
+
+Bad — no type validation, errors surface only at deploy time:
+```yaml
+# values.yaml without a schema — helm install accepts any type
+replicaCount: "three"   # string where integer expected — template renders, K8s rejects
+```
+
+Good — type errors caught at lint/install time:
+```json
+// values.schema.json
+{
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 1 }
+  }
+}
+```
+
+Without a schema, `--set replicaCount=abc` silently sets a string where an integer is expected. The template renders, Kubernetes rejects the manifest, and the error message points to the rendered YAML — not the values file where the mistake was made.
+
+**Fix for existing charts**: generate a starter schema from values.yaml using `helm-schema-gen` or write manually. Add `helm lint --strict` to CI — it validates against the schema.
+
 ## Unquoted strings that YAML coerces
 
 Bad:

@@ -44,8 +44,8 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-edition = "2021"
-rust-version = "1.75"
+edition = "2024"
+rust-version = "1.85"
 license = "MIT"
 
 [workspace.dependencies]
@@ -245,6 +245,38 @@ impl From<Config> for Settings {
 
 See [trait-cheatsheet.md](trait-cheatsheet.md) for derive-vs-manual guidance per trait.
 
+## Tracing
+
+Use the `tracing` crate for structured, span-based instrumentation. Replaces `log` for async code.
+
+```rust
+use tracing::{info, warn, instrument};
+
+#[instrument(skip(db), fields(user_id = %id))]
+async fn get_user(db: &Pool, id: &str) -> Result<User> {
+    info!("fetching user");
+    let user = db.query_one("SELECT ...", &[&id])
+        .await
+        .context("query failed")?;
+    Ok(user)
+}
+```
+
+- `#[instrument]` auto-creates a span named after the function. Use `skip(secret)` to avoid logging sensitive arguments.
+- Use `tracing_subscriber` for output. JSON formatter for production, pretty formatter for development.
+- Spans propagate across `.await` points — each log line carries the full call chain context.
+
+## Shared State
+
+| Pattern | Use when |
+|---------|----------|
+| `Arc<Mutex<T>>` | Multiple writers, low contention |
+| `Arc<RwLock<T>>` | Many readers, few writers |
+| `Arc<DashMap<K, V>>` | Concurrent map, high contention |
+| `mpsc` / `watch` channels | State owned by one task, others send/observe |
+
+Use `tokio::sync::Mutex` only when holding the lock across `.await`. For synchronous critical sections, `std::sync::Mutex` is faster.
+
 ## Concurrency vs Parallelism
 
 - **tokio** — async I/O concurrency (network, disk, timers). Use for servers, HTTP clients, database queries.
@@ -397,6 +429,10 @@ let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
 4. **`#[inline]`** only for small functions called across crate boundaries. Never on large functions — let the compiler decide.
 5. **`String::with_capacity(n)`** when the final size is known or estimable.
 
+## Recommended Crates
+
+See [crate-recommendations.md](crate-recommendations.md) for the full table (axum, reqwest, serde, clap, sqlx, tracing, thiserror, anyhow, proptest, tokio).
+
 ## Cargo Conventions
 
 **Cargo.toml ordering**: `[package]`, `[features]`, `[dependencies]`, `[dev-dependencies]`, `[build-dependencies]`, `[[bin]]`, `[[bench]]`, `[profile.*]`.
@@ -448,9 +484,11 @@ Use `lto = "fat"` for maximum binary size reduction when build time is not a con
 ## Deep-dive references
 
 **Error handling**: See [patterns/error-handling-patterns.md](patterns/error-handling-patterns.md) for thiserror/anyhow patterns, conversion chains, backtrace
+**Serde**: See [patterns/serde-patterns.md](patterns/serde-patterns.md) for rename_all, deny_unknown_fields, tagged enums, flatten
 **Async**: See [patterns/async-patterns.md](patterns/async-patterns.md) for tokio runtime, channels, select!, shutdown, connection pooling
 **Testing**: See [patterns/testing-patterns.md](patterns/testing-patterns.md) for table-driven, mockall, proptest, test helpers
 **Traits**: See [trait-cheatsheet.md](trait-cheatsheet.md) for derive-vs-manual guidance per standard trait
+**Crates**: See [crate-recommendations.md](crate-recommendations.md) for recommended crates by category
 
 ## Official references
 

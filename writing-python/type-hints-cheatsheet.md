@@ -88,41 +88,24 @@ def greet(name: str, excited: bool = False) -> str:
 
 ## Generics
 
-### TypeVar
+### Type parameter syntax (3.12+)
+
+The preferred way to write generics in Python 3.12+:
 
 ```python
-from typing import TypeVar
-
-T = TypeVar("T")
-
-def first(items: list[T]) -> T:
+# Generic function — no TypeVar needed
+def first[T](items: list[T]) -> T:
     return items[0]
 
-# Bounded TypeVar
-from typing import TypeVar
+# Bounded type parameter
+def clone[A: Animal](animal: A) -> A: ...
 
-Num = TypeVar("Num", int, float)
-
-def add(a: Num, b: Num) -> Num:
+# Constrained type parameter
+def add[N: (int, float)](a: N, b: N) -> N:
     return a + b
 
-# Upper-bound TypeVar
-from typing import TypeVar
-
-class Animal: ...
-A = TypeVar("A", bound=Animal)
-
-def clone(animal: A) -> A: ...
-```
-
-### Generic classes
-
-```python
-from typing import TypeVar, Generic
-
-T = TypeVar("T")
-
-class Stack(Generic[T]):
+# Generic class
+class Stack[T]:
     def __init__(self) -> None:
         self._items: list[T] = []
 
@@ -132,13 +115,26 @@ class Stack(Generic[T]):
     def pop(self) -> T:
         return self._items.pop()
 
-    def peek(self) -> T | None:
-        return self._items[-1] if self._items else None
-
-# Usage — type is inferred
 stack = Stack[int]()
 stack.push(42)
-val: int = stack.pop()
+```
+
+### TypeVar (pre-3.12)
+
+```python
+from typing import TypeVar, Generic
+
+T = TypeVar("T")
+
+def first(items: list[T]) -> T:
+    return items[0]
+
+Num = TypeVar("Num", int, float)  # constrained
+A = TypeVar("A", bound=Animal)    # upper-bound
+
+class Stack(Generic[T]):
+    def __init__(self) -> None:
+        self._items: list[T] = []
 ```
 
 ## Protocol — structural subtyping
@@ -194,6 +190,23 @@ def process(items: list[object]) -> None:
     if is_string_list(items):
         # items is now list[str]
         print(items[0].upper())
+```
+
+### TypeIs (3.13+)
+
+Stricter than `TypeGuard` — narrows both branches (true and false):
+
+```python
+from typing import TypeIs
+
+def is_str(val: str | int) -> TypeIs[str]:
+    return isinstance(val, str)
+
+def process(val: str | int) -> None:
+    if is_str(val):
+        print(val.upper())   # narrowed to str
+    else:
+        print(val + 1)       # narrowed to int (TypeGuard wouldn't narrow here)
 ```
 
 ### assert_never — exhaustiveness checking
@@ -309,16 +322,26 @@ class Base:
         ...
 ```
 
-## TypeAlias
+## Type aliases
 
-Name complex types for readability.
+### `type` statement (3.12+)
+
+```python
+type UserId = int
+type Headers = dict[str, str]
+type Handler = Callable[[Request], Response | None]
+type JsonValue = str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
+```
+
+Supports forward references without quotes — `JsonValue` can reference itself directly.
+
+### TypeAlias (pre-3.12)
 
 ```python
 from typing import TypeAlias
 
 UserId: TypeAlias = int
 Headers: TypeAlias = dict[str, str]
-Handler: TypeAlias = Callable[[Request], Response | None]
 JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 ```
 
@@ -335,6 +358,7 @@ JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dic
 | Fixed shape dict | `TypedDict` |
 | Exact values | `Literal["a", "b"]` |
 | Duck typing | `Protocol` |
-| Generic param | `TypeVar("T")` |
-| Complex alias | `TypeAlias` |
+| Generic param | `def f[T]()` (3.12+) or `TypeVar("T")` |
+| Complex alias | `type X = ...` (3.12+) or `TypeAlias` |
+| Narrow both branches | `TypeIs` (3.13+) |
 | Immutable | `Final` |

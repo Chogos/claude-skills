@@ -12,6 +12,8 @@
 - Units
 - Net and HTTP
 - Crypto and tokens
+- Metadata
+- Debugging
 
 ## Strings
 
@@ -156,3 +158,44 @@ io.jwt.decode_verify("eyJ...", {
     "iss": "expected-issuer",
 })
 ```
+
+## Metadata
+
+Access rule annotations at runtime via `rego.metadata`:
+
+```rego
+# METADATA
+# title: Require labels
+# custom:
+#   severity: high
+#   code: K8S-001
+
+deny contains {
+    "msg": msg,
+    "severity": rego.metadata.rule().custom.severity,
+    "code": rego.metadata.rule().custom.code,
+} if {
+    msg := "Missing required labels"
+    # ...
+}
+
+# Access the chain of metadata annotations from current rule up to package
+rego.metadata.chain()   # [{rule metadata}, {package metadata}, ...]
+```
+
+Metadata annotations follow the `# METADATA` comment block (YAML format). Available via `rego.metadata.rule()` (current rule) and `rego.metadata.chain()` (rule + package hierarchy).
+
+## Debugging
+
+```rego
+# print() — writes to stderr during eval and test
+print("checking user:", input.user.name, "roles:", input.user.roles)
+
+# trace() — adds a note to the evaluation trace (visible with --explain)
+trace(sprintf("user %s denied: missing role %s", [input.user.name, "admin"]))
+```
+
+- `print()` — quick debugging, shows values. Remove before production. Visible with `opa eval`, `opa test -v`.
+- `trace()` — adds a TraceNote event. Visible with `opa eval --explain=notes` or `--explain=full`.
+- `opa eval --explain=full` — shows the complete evaluation trace: every rule entered, every expression evaluated.
+- `opa eval --profile` — shows evaluation time per rule. Use to find bottlenecks.

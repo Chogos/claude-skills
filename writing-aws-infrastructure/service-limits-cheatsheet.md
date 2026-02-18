@@ -103,3 +103,51 @@ Default quotas for commonly used services. Check [Service Quotas console](https:
 | Custom resource timeout | 1 hour | No | |
 | Change set quota per stack | 10 | No | Delete unused change sets |
 | Exports per region | 200 | No | Prefer SSM parameters over exports |
+
+## API Gateway
+
+| Limit | Default | Adjustable | Notes |
+|-------|---------|------------|-------|
+| HTTP APIs per region | 100 | Yes | |
+| REST APIs per region | 600 | Yes | |
+| Routes per HTTP API | 300 | Yes | |
+| Resources per REST API | 300 | No | |
+| Stages per API | 10 | Yes | |
+| Authorizers per API | 10 | Yes | |
+| Throttle (account level) | 10,000 req/s, 5,000 burst | Yes | Shared across all APIs in the region |
+| Throttle per-route (HTTP API) | 10,000 req/s | Yes | |
+| Payload size | 10 MB | No | Both HTTP API and REST API |
+| WebSocket message size | 128 KB (send), 32 KB (receive) | No | |
+| Custom domain names per region | 120 | Yes | |
+| Integration timeout | 30 seconds (HTTP API), 29 seconds (REST API) | No | |
+| Cache size (REST API only) | 0.5 – 237 GB | No | Not available on HTTP API |
+
+## SQS
+
+| Limit | Default | Adjustable | Notes |
+|-------|---------|------------|-------|
+| Queues per region | 1,000 (standard), 1,000 (FIFO) | Yes | |
+| Message size | 256 KB | No | Use S3 for larger payloads via Extended Client Library |
+| Message retention | 1 minute – 14 days | No | Default 4 days |
+| Visibility timeout | 0 seconds – 12 hours | No | Set to ≥6x Lambda timeout |
+| Inflight messages | 120,000 (standard), 20,000 (FIFO) | No | Messages received but not yet deleted |
+| Batch size | 10 messages | No | Per `SendMessageBatch` / `ReceiveMessage` |
+| FIFO throughput | 300 msg/s (without batching), 3,000 msg/s (with batching) | No | Per message group for ordering |
+| FIFO high throughput | 30,000 msg/s | No | Requires `DeduplicationScope: messageGroup` |
+| Long polling wait time | 0 – 20 seconds | No | Use 20s to reduce empty responses and cost |
+| Delay queue | 0 – 15 minutes | No | Per-queue or per-message |
+
+## SNS
+
+| Limit | Default | Adjustable | Notes |
+|-------|---------|------------|-------|
+| Topics per region | 100,000 | Yes | |
+| Subscriptions per topic | 12,500,000 | Yes | |
+| Message size | 256 KB | No | Use S3 for larger payloads |
+| Publish rate | Varies by region | Yes | ~30,000/s for standard topics |
+| FIFO topic throughput | 300 publishes/s | No | Per message group |
+| Filter policies per topic | 200 | Yes | One per subscription |
+| Filter policy size | 150 KB | No | |
+| SMS spending limit | $1.00/month | Yes | Set via account attributes |
+| Mobile push platform applications | 1,000 | No | |
+| Delivery retries (HTTP/S) | 100,185 over 23 days | No | Exponential backoff built-in |

@@ -71,11 +71,20 @@ done < <(find . -name "*.txt" -print0)
 ```bash
 cleanup() {
     local exit_code=$?
+    # Kill background jobs before cleaning up
+    jobs -p | xargs -r kill 2>/dev/null || true
+    wait 2>/dev/null || true
     rm -rf "$TEMP_DIR"
     exit "$exit_code"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'trap - EXIT; cleanup; kill -INT $$' INT
+trap 'trap - EXIT; cleanup; kill -TERM $$' TERM
 ```
+
+- `trap cleanup EXIT` runs on normal exit, errors (`set -e`), and signals.
+- Separate `INT`/`TERM` traps re-raise the signal so the parent process sees the correct exit status.
+- Kill child processes explicitly — by default, backgrounded jobs survive the parent's exit.
 
 ## Logging
 
@@ -98,17 +107,7 @@ die()       { log_error "$@"; exit 1; }
 
 ## String Manipulation
 
-Use parameter expansion — no need for `sed`/`awk` on simple transformations:
-
-```bash
-file="/path/to/config.tar.gz"
-"${file#*/}"       # path/to/config.tar.gz  (remove shortest prefix match)
-"${file##*/}"      # config.tar.gz          (remove longest prefix match)
-"${file%.*}"       # /path/to/config.tar    (remove shortest suffix match)
-"${file%%.*}"      # /path/to/config        (remove longest suffix match)
-"${file/tar/zip}"  # /path/to/config.zip.gz (first substitution)
-"${file//o/0}"     # /path/t0/c0nfig.tar.gz (all substitutions)
-```
+Prefer parameter expansion over `sed`/`awk` for simple transformations (`${var#pattern}`, `${var%pattern}`, `${var/old/new}`).
 
 Defaults and guards:
 ```bash
@@ -116,6 +115,35 @@ Defaults and guards:
 "${1:?error msg}"  # exit with error if $1 is unset or empty
 "${var:+alt}"      # use alt if var is set and non-empty, else empty
 ```
+
+## Working with JSON (jq)
+
+Use `jq` for JSON processing — never parse JSON with `grep`/`sed`/`awk`.
+
+```bash
+# Extract a field
+name=$(jq -r '.user.name' response.json)
+
+# Iterate over array elements
+jq -r '.items[] | .id' data.json | while IFS= read -r id; do
+    process "$id"
+done
+
+# Build JSON safely with --arg (handles escaping)
+jq -n --arg name "$USER" --arg host "$HOSTNAME" \
+    '{"name": $name, "host": $host}'
+
+# Modify JSON in-place
+jq '.config.timeout = 30 | .config.retries = 3' config.json > tmp.json \
+    && mv tmp.json config.json
+
+# Select and filter
+jq '[.[] | select(.status == "active")]' users.json
+```
+
+- Always use `-r` (raw output) when piping `jq` output to other commands — without it, strings include quotes.
+- Use `--arg` and `--argjson` to pass shell variables into jq expressions safely.
+- Use `--exit-status` (or `-e`) to make jq return non-zero when the filter produces `false` or `null`.
 
 ## Arrays
 
@@ -174,6 +202,8 @@ Rule ranges: SC1xxx = syntax/parsing, SC2xxx = best practices, SC3xxx = POSIX co
 
 - Check required tools: `command -v git >/dev/null || die "git required"`.
 - Avoid GNU-specific options when possible (see [portability-matrix.md](portability-matrix.md)).
+- **POSIX sh vs bash**: POSIX sh has no arrays, no `[[ ]]`, no `<()` process substitution, no `{a,b}` brace expansion, no `+=` append. Use `#!/bin/sh` only when you avoid all bash-isms.
+- **macOS ships bash 3.2** (2007, GPLv2). Associative arrays (`declare -A`) require bash 4+. If targeting macOS, either use `#!/bin/sh` (POSIX) or require users to install modern bash via Homebrew.
 
 ## New script workflow
 

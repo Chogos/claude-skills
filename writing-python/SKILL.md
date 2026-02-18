@@ -35,13 +35,13 @@ Minimal `pyproject.toml`:
 [project]
 name = "my-package"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
@@ -54,14 +54,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 ```
 
+**`[dependency-groups]`** (PEP 735) for development/CI tools — not included when the package is installed by consumers. **`[project.optional-dependencies]`** for optional features users can install (`pip install my-package[postgres]`). Don't mix them: dev tools go in dependency-groups, optional runtime features go in optional-dependencies.
+
 ## Type Hints
 
 Type-hint all public function signatures — parameters and return types.
 
 - Use built-in generics: `list[str]`, `dict[str, int]`, `tuple[int, ...]`, `set[float]`.
 - `X | None` over `Optional[X]`. `X | Y` over `Union[X, Y]`.
-- `TypeAlias` for complex types.
-- `TypeVar` for generic functions and classes.
+- `type X = ...` (3.12+) for type aliases. `TypeAlias` for older Python.
+- `def f[T](x: T) -> T` (3.12+) for generic functions. `TypeVar` for older Python.
 - `Protocol` over `ABC` — structural subtyping, no inheritance required.
 - Never use `Any` without a comment explaining why.
 
@@ -89,6 +91,7 @@ See [type-hints-cheatsheet.md](type-hints-cheatsheet.md) for the full reference.
 - Re-raise with `from` to preserve the chain.
 - `contextlib.suppress()` for intentional ignoring.
 - Never swallow exceptions silently.
+- `ExceptionGroup` + `except*` (3.11+) for handling multiple concurrent errors (from `TaskGroup`, `gather`).
 
 ```python
 class AppError(Exception):
@@ -123,6 +126,13 @@ with suppress(FileNotFoundError):
 ```
 
 ## Data Modeling
+
+| Need | Use | Why |
+|------|-----|-----|
+| Internal value objects | `dataclass(frozen=True, slots=True)` | Fast, stdlib, no deps |
+| API request/response, config | Pydantic `BaseModel` | Validation, serialization, coercion |
+| Simple records | `NamedTuple` | Immutable, iterable, lightweight |
+| Performance-critical | `attrs` | Like dataclass but faster, more features |
 
 ### dataclasses — internal data
 
@@ -215,7 +225,7 @@ Configure in `pyproject.toml`:
 
 ```toml
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 99
 
 [tool.ruff.lint]
@@ -231,7 +241,7 @@ select = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true

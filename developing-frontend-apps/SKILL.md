@@ -1,6 +1,6 @@
 ---
 name: developing-frontend-apps
-description: Frontend application development best practices. Use when building, modifying, or reviewing frontend applications, UI components, client-side JavaScript/TypeScript, CSS/styling, or web application architecture.
+description: Frontend application development best practices. Use when building, modifying, or reviewing frontend applications, React components, UI components, client-side JavaScript/TypeScript, CSS/styling, single-page applications, or web application architecture.
 ---
 
 # Frontend Application Development Best Practices
@@ -62,9 +62,9 @@ description: Frontend application development best practices. Use when building,
 - Target: initial JS payload under 200KB gzipped.
 
 ### Core Web Vitals
-- **LCP < 2.5s** — preload hero image, inline critical CSS, avoid render-blocking scripts.
-- **INP < 200ms** — keep main thread free, defer non-critical work, use `startTransition` for expensive updates.
-- **CLS < 0.1** — set explicit dimensions on images/video, reserve space for dynamic content, avoid layout shifts from web fonts.
+- **LCP** — preload hero image, inline critical CSS, avoid render-blocking scripts.
+- **INP** — keep main thread free, defer non-critical work, use `startTransition` for expensive updates.
+- **CLS** — set explicit dimensions on images/video, reserve space for dynamic content, avoid layout shifts from web fonts.
 
 ### Rendering
 - Virtualize long lists (TanStack Virtual, react-window) — never render 1000+ DOM nodes.
@@ -73,7 +73,7 @@ description: Frontend application development best practices. Use when building,
 
 ## Accessibility
 
-- **Semantic HTML**. `<button>` not `<div onClick>`. Use `<nav>`, `<main>`, `<aside>`, `<section>`, `<header>`, `<footer>`.
+- **Semantic HTML**. Use `<nav>`, `<main>`, `<aside>`, `<section>`, `<header>`, `<footer>`. Native interactive elements over styled divs.
 - **Keyboard operable**. Every interactive element reachable via Tab. Custom widgets need arrow key navigation.
 - **Alt text**. Descriptive for informational images. Empty `alt=""` for decorative images.
 - **Form labels**. Every input needs a `<label>`. Link error messages with `aria-describedby`:
@@ -104,6 +104,14 @@ description: Frontend application development best practices. Use when building,
 - **Logical properties**. `margin-inline`, `padding-block`, `inline-size` instead of directional properties — supports RTL layouts.
 - **No magic numbers**. Use tokens, `em`/`rem`, or `calc()`. Every value should have a reason.
 - **Prefer gap**. `gap` on flex/grid replaces margin hacks and adjacent sibling selectors.
+- **Respect motion preferences**. Wrap animations in `@media (prefers-reduced-motion: no-preference)`. Provide a static alternative for users with vestibular disorders.
+  ```css
+  @media (prefers-reduced-motion: no-preference) {
+    .card { transition: transform 0.2s ease; }
+    .card:hover { transform: scale(1.02); }
+  }
+  ```
+- **Performant animations**. Animate only `transform` and `opacity` — they run on the compositor thread, avoiding layout/paint. Use `will-change` sparingly and remove after animation completes.
 
 ## TypeScript for Frontend
 
@@ -153,6 +161,24 @@ description: Frontend application development best practices. Use when building,
 - Use Playwright. Page Object Model for reusable selectors.
 - Run in CI against a staging environment or docker-compose stack.
 
+## Error Recovery
+
+- **Error boundaries**. Wrap route segments with error boundaries. Show a fallback UI with a retry button — don't crash the entire page.
+- **Retry on failure**. Configure TanStack Query with `retry: 3` and exponential backoff. Show a manual retry button after automatic retries are exhausted.
+  ```tsx
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 3,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+      },
+    },
+  });
+  ```
+- **Error pages**. Dedicated 404 and 500 components. If using a framework with file-based routing, use its conventions (`not-found.tsx`, `error.tsx`).
+- **Offline detection**. Listen to `online`/`offline` events. Show a banner when offline. Warn users before actions that require network.
+- **Graceful degradation**. If a non-critical feature fails (analytics, chat widget, recommendations), catch the error and hide the feature. Don't crash the page for optional UI.
+
 ## Security
 
 - **XSS**. Never use `dangerouslySetInnerHTML` with user input. Sanitize with DOMPurify if you must render HTML.
@@ -166,6 +192,7 @@ description: Frontend application development best practices. Use when building,
 ## Build Tooling
 
 - **Vite** for new projects. Fast dev server (native ESM), optimized production builds (Rollup).
+- **Biome** as an alternative to ESLint + Prettier. Single Rust-based tool for linting and formatting — faster, zero config for most projects. Evaluate for new projects; existing ESLint configs with custom rules may not have Biome equivalents yet.
 - **Path aliases**. `"@/*": ["./src/*"]` in `tsconfig.json` and `vite.config.ts`:
   ```ts
   // vite.config.ts
@@ -202,7 +229,7 @@ description: Frontend application development best practices. Use when building,
 - [ ] Set up routing (React Router, TanStack Router)
 - [ ] Configure data fetching (TanStack Query)
 - [ ] Add testing stack (Vitest + Testing Library + MSW + Playwright)
-- [ ] Add error boundary at app root
+- [ ] Add error boundary at app root and error pages (404, 500)
 - [ ] Set up CI pipeline (lint → type-check → test → build → lighthouse)
 - [ ] Configure env vars, source maps, bundle analysis
 - [ ] Run validation loop (below)

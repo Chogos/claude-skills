@@ -42,6 +42,40 @@ description: Helm chart development best practices. Use when creating, modifying
 - Group related configs (`image.*`, `service.*`, `ingress.*`).
 - Use `global` sparingly. Support env-specific value files.
 
+## Values Schema Validation
+
+Create `values.schema.json` alongside `values.yaml`. Helm validates values against this schema on `install`, `upgrade`, `lint`, and `template`:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["image"],
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": { "type": "string" },
+        "tag": { "type": "string" },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      }
+    }
+  }
+}
+```
+
+- Catches type errors before deploy: `"true"` where boolean expected, string where integer needed.
+- Documents the values contract — consumers see exactly what's accepted without reading templates.
+- Works with `helm lint` — schema violations are reported as errors.
+
 ## Templates
 
 - `{{- }}` for whitespace control. Two spaces, never tabs.
@@ -86,7 +120,14 @@ description: Helm chart development best practices. Use when creating, modifying
 ## Dependencies
 
 - Patch-level version matching: `version: ~1.2.3`.
-- Prefer `https://` repository URLs.
+- Prefer `https://` repository URLs. OCI registries also supported (default since Helm 3.8):
+  ```yaml
+  dependencies:
+    - name: postgresql
+      version: "~15.5.0"
+      repository: "oci://registry-1.docker.io/bitnamicharts"
+  ```
+- OCI push/pull: `helm push mychart-0.1.0.tgz oci://ghcr.io/org/charts`. No `helm repo add` needed.
 - Conditional: `condition: somechart.enabled`.
 - Run `helm dependency update` after Chart.yaml changes.
 
@@ -94,6 +135,39 @@ description: Helm chart development best practices. Use when creating, modifying
 
 - Place in `crds/` directory (static YAML, not templated).
 - Helm doesn't upgrade or delete CRDs for safety.
+
+## GitOps Deployment
+
+Most production charts are deployed via ArgoCD or Flux, not manual `helm install`. Design charts with GitOps in mind.
+
+- **Values in Git**: store per-environment values files in a separate GitOps repo. The chart source repo contains the chart; the GitOps repo contains the deployment configuration.
+- **ArgoCD Application**:
+  ```yaml
+  apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    name: my-app
+    namespace: argocd
+  spec:
+    source:
+      repoURL: https://github.com/org/charts
+      chart: my-app
+      targetRevision: 1.2.0
+      helm:
+        valueFiles:
+          - values-prod.yaml
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: my-app
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+  ```
+- **Automated image updates**: ArgoCD Image Updater or Flux image automation watches a container registry and updates the image tag in the values file. The chart itself doesn't change.
+- **Rollback**: ArgoCD auto-rollback on degraded health. Flux `HelmRelease` with `remediation.retries` and rollback on failure.
+
+See [patterns/gitops-integration.md](patterns/gitops-integration.md) for Flux HelmRelease, multi-environment structure, and automated image updates.
 
 ## New chart workflow
 
@@ -109,7 +183,7 @@ description: Helm chart development best practices. Use when creating, modifying
 
 ## Validation loop
 
-1. `helm lint charts/*` — fix any warnings or errors
+1. `helm lint --strict charts/*` — fix warnings and errors (includes schema validation if values.schema.json exists)
 2. `helm template charts/* --validate` — fix rendering issues
 3. `helm-unittest` — fix failing tests
 4. Repeat until all three pass clean
@@ -178,6 +252,7 @@ metadata:
 **Full chart template**: See [patterns/chart-scaffolding.md](patterns/chart-scaffolding.md) for a production-ready scaffold
 **Values design**: See [patterns/values-design.md](patterns/values-design.md) for grouping, type coercion, overrides
 **Security hardening**: See [patterns/security-hardening.md](patterns/security-hardening.md) for SecurityContext, RBAC, NetworkPolicy, secrets
+**GitOps integration**: See [patterns/gitops-integration.md](patterns/gitops-integration.md) for ArgoCD, Flux, multi-environment values, automated image updates
 **Anti-patterns**: See [anti-patterns.md](anti-patterns.md) for common mistakes with corrected versions
 
 ## Official references

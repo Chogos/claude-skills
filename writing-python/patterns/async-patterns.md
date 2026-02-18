@@ -11,38 +11,29 @@
 
 ## Entry point with signal handling
 
+Use `TaskGroup` for structured cleanup on shutdown:
+
 ```python
 import asyncio
 import signal
-import sys
-from collections.abc import Coroutine
-from typing import Any
-
-async def shutdown(sig: signal.Signals, loop: asyncio.AbstractEventLoop) -> None:
-    """Cancel all running tasks on signal."""
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    for task in tasks:
-        task.cancel()
-    await asyncio.gather(*tasks, return_exceptions=True)
-    loop.stop()
 
 async def main() -> None:
+    shutdown_event = asyncio.Event()
+
     loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, shutdown_event.set)
 
-    # Register signal handlers (Unix only)
-    if sys.platform != "win32":
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(
-                sig,
-                lambda s=sig: asyncio.create_task(shutdown(s, loop)),
-            )
-
-    # Application logic
-    await run_server()
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(run_server(shutdown_event))
+        tg.create_task(run_worker(shutdown_event))
+    # All tasks complete (or cancel) before reaching this line
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+Each long-running task checks `shutdown_event.is_set()` or `await shutdown_event.wait()` to exit cleanly. `TaskGroup` ensures no orphaned tasks.
 
 For simpler scripts without custom signal handling:
 

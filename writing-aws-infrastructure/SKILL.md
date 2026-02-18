@@ -286,6 +286,98 @@ ordersTable.grantReadWriteData(processOrder);
   ```
 - Run `cdk-nag` in CI. Add suppressions with justification, never disable globally.
 
+### CDK testing
+
+Test infrastructure the same way you test application code. CDK provides assertion utilities via `aws-cdk-lib/assertions`.
+
+```typescript
+import { Template, Match } from "aws-cdk-lib/assertions";
+import { App } from "aws-cdk-lib";
+import { ApiStack } from "../lib/api-stack";
+
+const app = new App();
+const stack = new ApiStack(app, "Test");
+const template = Template.fromStack(stack);
+
+// Fine-grained: verify specific resource properties
+template.hasResourceProperties("AWS::Lambda::Function", {
+  Runtime: "nodejs22.x",
+  Timeout: 30,
+  MemorySize: 512,
+});
+
+// Count resources of a type
+template.resourceCountIs("AWS::SQS::Queue", 2);
+
+// Verify no public S3 buckets
+template.hasResourceProperties("AWS::S3::Bucket", {
+  PublicAccessBlockConfiguration: {
+    BlockPublicAcls: true,
+    BlockPublicPolicy: true,
+  },
+});
+```
+
+- **Fine-grained assertions** (`hasResourceProperties`, `resourceCountIs`) over snapshot tests — snapshots break on CDK version bumps and unrelated changes.
+- **cdk-nag as test assertions**: run NagPacks in your test suite so security violations fail the build, not just log warnings.
+- **Snapshot tests**: useful for catching unintended drift in stable stacks. Use `template.toJSON()` with your test framework's snapshot matcher.
+
+## API Gateway
+
+### HTTP API vs REST API
+
+| Feature | HTTP API (v2) | REST API (v1) |
+|---------|---------------|---------------|
+| Cost | ~$1/million requests | ~$3.50/million requests |
+| Latency | Lower (~10ms added) | Higher (~30ms added) |
+| Auth | JWT, Lambda, IAM | JWT (via Lambda), Lambda, IAM, Cognito, API keys |
+| Request validation | No | Yes (JSON Schema) |
+| WAF integration | No | Yes |
+| Usage plans / throttling | Route-level only | Per-client API keys with quotas |
+| Caching | No | Yes (0.5–237 GB) |
+| WebSocket | No | Separate WebSocket API |
+
+**Default to HTTP API.** Use REST API when you need request validation, WAF, caching, or per-client usage plans.
+
+### Authorization
+
+```typescript
+// JWT authorizer (HTTP API) — validates tokens without a Lambda invocation
+import { HttpJwtAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+
+const jwtAuth = new HttpJwtAuthorizer("JwtAuth", "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_xxx", {
+  jwtAudience: ["api-client-id"],
+});
+
+httpApi.addRoutes({
+  path: "/orders",
+  methods: [HttpMethod.GET],
+  integration: new HttpLambdaIntegration("GetOrders", getOrders),
+  authorizer: jwtAuth,
+});
+```
+
+- **JWT authorizer**: cheapest — no Lambda invocation. Works with Cognito, Auth0, any OIDC provider.
+- **Lambda authorizer**: custom logic (multi-tenant, RBAC, token introspection). Cache authorization results to reduce invocations.
+- **IAM authorizer**: service-to-service calls signed with SigV4. No user-facing auth.
+
+### Custom domains
+
+```typescript
+import { DomainName } from "aws-cdk-lib/aws-apigatewayv2";
+
+const domain = new DomainName(this, "ApiDomain", {
+  domainName: "api.example.com",
+  certificate: cert,  // ACM certificate in us-east-1 for edge, same region for regional
+});
+```
+
+Create a Route 53 alias record pointing to the API Gateway domain. Use stage mapping for versioning (`api.example.com/v1`).
+
+## Event-Driven Architecture
+
+Lambda integrates natively with SQS, SNS, EventBridge, Kinesis, and DynamoDB Streams. For event-driven patterns — fan-out, choreography, CQRS, event sourcing — see [patterns/serverless-patterns.md](patterns/serverless-patterns.md).
+
 ## Cost Optimization
 
 - **Tagging**: every resource must have `Project`, `Environment`, `Owner`. Use tag policies in AWS Organizations.
@@ -340,10 +432,11 @@ ordersTable.grantReadWriteData(processOrder);
 ## Validation loop
 
 1. **Lint**: `cfn-lint template.yaml` or `cdk synth` — catch syntax errors, invalid property values, missing required fields.
-2. **Security scan**: `cfn_nag_scan --input-path template.yaml` or `cdk-nag` — flag overly permissive policies, missing encryption, public access.
-3. **Policy-as-code**: `checkov -f template.yaml` — broader compliance checks (CIS, SOC2, HIPAA benchmarks).
-4. **IAM analysis**: `aws accessanalyzer validate-policy --policy-document file://policy.json` — detect unused permissions, overly broad resources, missing conditions.
-5. Repeat until all tools report clean. Suppress findings only with written justification.
+2. **CDK tests** (if using CDK): `npx jest` or `npx vitest` — run fine-grained assertions and cdk-nag checks.
+3. **Security scan**: `cfn_nag_scan --input-path template.yaml` or `cdk-nag` — flag overly permissive policies, missing encryption, public access.
+4. **Policy-as-code**: `checkov -f template.yaml` — broader compliance checks (CIS, SOC2, HIPAA benchmarks).
+5. **IAM analysis**: `aws accessanalyzer validate-policy --policy-document file://policy.json` — detect unused permissions, overly broad resources, missing conditions.
+6. Repeat until all tools report clean. Suppress findings only with written justification.
 
 ## Deep-dive references
 

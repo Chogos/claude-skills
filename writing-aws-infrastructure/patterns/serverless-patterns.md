@@ -348,6 +348,70 @@ environment: {
 }
 ```
 
+## Lambda Authorizer
+
+Custom authorization logic for API Gateway. Returns an IAM policy that API Gateway caches and evaluates for subsequent requests.
+
+### Token-based (HTTP API)
+
+```typescript
+import { HttpLambdaAuthorizer, HttpLambdaResponseType } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+
+const authHandler = new NodejsFunction(this, "Authorizer", {
+  entry: "src/handlers/authorizer.ts",
+  runtime: Runtime.NODEJS_22_X,
+  architecture: Architecture.ARM_64,
+  memorySize: 256,
+  timeout: Duration.seconds(5),
+});
+
+const authorizer = new HttpLambdaAuthorizer("ApiAuth", authHandler, {
+  responseTypes: [HttpLambdaResponseType.SIMPLE],
+  resultsCacheTtl: Duration.minutes(5),  // cache auth results per token
+});
+
+httpApi.addRoutes({
+  path: "/orders",
+  methods: [HttpMethod.GET],
+  integration: new HttpLambdaIntegration("GetOrders", getOrders),
+  authorizer,
+});
+```
+
+### Authorizer handler (simple response)
+
+```typescript
+// src/handlers/authorizer.ts
+import type { APIGatewaySimpleAuthorizerWithContextResult } from "aws-lambda";
+
+export const handler = async (event: any): Promise<APIGatewaySimpleAuthorizerWithContextResult<Record<string, string>>> => {
+  const token = event.headers?.authorization?.replace("Bearer ", "");
+
+  if (!token) {
+    return { isAuthorized: false, context: {} };
+  }
+
+  try {
+    const claims = await verifyToken(token);  // JWT verification, DB lookup, etc.
+    return {
+      isAuthorized: true,
+      context: {
+        userId: claims.sub,
+        tenantId: claims.tenantId,
+      },
+    };
+  } catch {
+    return { isAuthorized: false, context: {} };
+  }
+};
+```
+
+The `context` object is available in downstream Lambda handlers via `event.requestContext.authorizer.lambda`.
+
+- **Cache TTL**: set `resultsCacheTtl` to avoid invoking the authorizer on every request. Balance between latency and token revocation speed.
+- **Keep authorizers fast**: <100ms. No database calls if avoidable — verify JWTs locally with cached JWKS.
+- **REST API authorizers** return an IAM policy document instead of a simple boolean. More powerful (resource-level allow/deny) but more complex.
+
 ## Cold start mitigation
 
 Cold starts add 100ms–2s depending on runtime, package size, and VPC attachment.

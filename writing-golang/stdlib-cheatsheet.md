@@ -338,3 +338,73 @@ err := errors.Join(validate(a), validate(b), validate(c))
 ```go
 return fmt.Errorf("open config: %w", err)
 ```
+
+## log/slog (Go 1.21+)
+
+**`slog.New(handler)`** — create a structured logger
+```go
+logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+```
+
+**`slog.Info(msg, attrs...)`** — log with key-value pairs
+```go
+slog.Info("request handled", slog.String("path", r.URL.Path), slog.Int("status", 200))
+```
+
+**`slog.With(attrs...)`** — create child logger with preset fields
+```go
+reqLogger := logger.With(slog.String("request_id", reqID))
+reqLogger.Info("processing") // includes request_id
+```
+
+**`slog.Group(name, attrs...)`** — nest attributes under a key
+```go
+slog.Info("done", slog.Group("http", slog.String("method", "GET"), slog.Int("status", 200)))
+// {"msg":"done","http":{"method":"GET","status":200}}
+```
+
+## iter (Go 1.23+)
+
+**`iter.Seq[V]`** — single-value iterator type
+```go
+type Seq[V any] func(yield func(V) bool)
+```
+
+**`iter.Seq2[K, V]`** — two-value iterator type (key-value, value-error)
+```go
+type Seq2[K, V any] func(yield func(K, V) bool)
+```
+
+## slices (Go 1.21+)
+
+**`slices.Collect(seq iter.Seq[E]) []E`** (Go 1.23+) — materialize iterator into slice
+```go
+keys := slices.Collect(maps.Keys(m))
+```
+
+**`slices.SortFunc(x []E, cmp func(a, b E) int)`** — sort with custom comparator
+```go
+slices.SortFunc(users, func(a, b User) int { return cmp.Compare(a.Name, b.Name) })
+```
+
+**`slices.Contains(s []E, v E) bool`** — membership test
+```go
+if slices.Contains(roles, "admin") { grant() }
+```
+
+## maps (Go 1.21+)
+
+**`maps.Keys(m map[K]V) iter.Seq[K]`** (Go 1.23+) — iterate over map keys
+```go
+for k := range maps.Keys(m) { fmt.Println(k) }
+```
+
+**`maps.Values(m map[K]V) iter.Seq[V]`** (Go 1.23+) — iterate over map values
+```go
+for v := range maps.Values(m) { fmt.Println(v) }
+```
+
+**`maps.Clone(m map[K]V) map[K]V`** — shallow copy
+```go
+copy := maps.Clone(original)
+```

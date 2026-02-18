@@ -1,6 +1,6 @@
 ---
 name: developing-backend-services
-description: Backend service development best practices. Use when designing, building, or reviewing backend services, APIs, microservices, or server-side applications regardless of language or framework.
+description: Backend service development best practices. Use when designing, building, or reviewing backend services, REST APIs, gRPC services, microservices, webhooks, message queues, or server-side applications regardless of language or framework.
 ---
 
 # Backend Service Development Best Practices
@@ -11,8 +11,8 @@ Design APIs as resource-oriented interfaces. Clients should interact with nouns,
 
 - **Resource URLs**: plural nouns, nested for relationships: `/users`, `/users/{id}/orders`.
 - **HTTP verbs**: GET (read), POST (create), PUT (full replace), PATCH (partial update), DELETE (remove).
-- **Status codes**: 200 OK, 201 Created, 204 No Content, 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict, 422 Unprocessable Entity, 429 Too Many Requests, 500 Internal Server Error.
-- **Versioning**: URL prefix (`/v1/users`) for public APIs, `Accept` header for internal. Never break existing versions.
+- **Status codes**: use the most specific code. Never return 200 with an error body.
+- **Versioning**: URL prefix (`/v1/users`) for public APIs, `Accept` header for internal. Never break existing versions. On deprecation, return `Sunset` and `Deprecation` headers — give consumers 6+ months to migrate. Run v1 and v2 in parallel with a shared data layer until traffic on the old version drops to zero.
 - **Pagination**: cursor-based over offset-based — offset breaks under concurrent writes.
   ```
   GET /orders?cursor=eyJpZCI6MTAwfQ&limit=25
@@ -139,16 +139,31 @@ Use queues when: the operation is slow (email, PDF generation), the caller doesn
 - **Backpressure**: limit consumer concurrency. Prefetch a bounded number of messages. If processing slows down, let the queue buffer — don't let consumers OOM.
 - **Message schema**: version your message payloads. Include a `type` and `version` field. Support backward-compatible evolution.
 
+## Webhooks
+
+- **Outbound delivery**: POST JSON to subscriber URLs. Sign with HMAC-SHA256 of `{timestamp}.{body}` using a shared secret. Send signature in `X-Webhook-Signature` header, event ID in `X-Webhook-ID`.
+- **Retry policy**: retry on 5xx or timeout with exponential backoff (1s, 5s, 25s, 125s, 625s). After 5 failures, disable the endpoint and notify the subscriber.
+- **Delivery log**: store every attempt (timestamp, status code, latency) for debugging. Expose via admin API.
+- **Inbound webhooks**: verify signature before processing. Respond 200 immediately, then process asynchronously via a queue. Deduplicate by event ID.
+
+See [patterns/api-design-patterns.md](patterns/api-design-patterns.md) for signature verification pseudocode.
+
 ## Error Handling
 
 - **Fail fast**: on unrecoverable errors (missing required config, corrupt state), crash immediately with a clear message. Don't limp along.
 - **Retry transient errors**: network timeouts, 503s, connection resets. Use exponential backoff with jitter: `delay = min(base * 2^attempt + random_jitter, max_delay)`.
-- **Circuit breaker**: protect against cascading failures.
-  - **Closed**: requests pass through. Track failure rate.
-  - **Open**: requests fail immediately (return fallback or 503). After a timeout, move to half-open.
-  - **Half-open**: allow a few requests through. If they succeed, close. If they fail, reopen.
-- **HTTP status codes**: 4xx for client errors (fix your request), 5xx for server errors (we broke something). Never return 200 with an error body.
+- **Circuit breaker**: protect against cascading failures. Three states: closed → open (after threshold failures) → half-open (probe requests). Typical config: `failure_threshold=5, recovery_timeout=30s, half_open_max=3`.
 - **Wrap errors with context**: when propagating errors, add what operation failed and why. `"failed to fetch user 123: connection refused"` over `"connection refused"`.
+
+## Testing
+
+- **Unit tests**: test service/handler logic in isolation. Mock external dependencies (DB, HTTP clients, queues) via interfaces. Focus on edge cases: invalid input, missing fields, boundary values, error paths. Aim for 80%+ coverage on business logic.
+- **Integration tests**: test against real dependencies using containers (testcontainers or `docker compose` in CI). Verify actual SQL queries, migration correctness, cache behavior, queue consumption. These catch bugs mocks hide.
+- **Contract tests**: validate API responses against the OpenAPI spec. Use tools like `schemathesis` or `dredd` to fuzz every endpoint. Detect breaking changes (removed fields, type changes) before merge.
+- **Load tests**: k6 or locust against staging. Define thresholds: p99 latency, error rate. Run on release branches, not every PR. Store results for trend analysis.
+- **Test doubles strategy**: use fakes for databases (testcontainers), mocks for HTTP clients (WireMock), and real queues (testcontainers with RabbitMQ/SQS). Mock what you don't own; fake what you do.
+
+Full patterns: see [patterns/testing-patterns.md](patterns/testing-patterns.md).
 
 ## Security
 
@@ -157,7 +172,7 @@ Use queues when: the operation is slow (email, PDF generation), the caller doesn
 - **Dependency scanning**: run `dependabot`, `snyk`, or `trivy` in CI. Block merges on high/critical CVEs.
 - **TLS everywhere**: all service-to-service communication over TLS. Use mTLS (mutual TLS) for internal service mesh — both sides present certificates.
 - **OWASP Top 10**: address injection, broken auth, sensitive data exposure, XXE, broken access control, misconfiguration, XSS, insecure deserialization, vulnerable components, insufficient logging.
-- **Security headers**: `Strict-Transport-Security`, `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`.
+- **Security headers**: `Strict-Transport-Security`, `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
 - **Least privilege**: service accounts get minimum required permissions. No shared credentials between services.
 
 ## New service workflow
@@ -174,7 +189,7 @@ Use queues when: the operation is slow (email, PDF generation), the caller doesn
 - [ ] Implement authentication and authorization middleware
 - [ ] Add rate limiting
 - [ ] Add graceful shutdown handling
-- [ ] Write unit tests and integration tests
+- [ ] Write unit tests, integration tests, and contract tests (see Testing section)
 - [ ] Configure CI pipeline (lint, test, scan, build)
 - [ ] Set up alerting (SLO-based)
 - [ ] Document runbook and API
@@ -193,7 +208,8 @@ Use queues when: the operation is slow (email, PDF generation), the caller doesn
 
 ## Deep-dive references
 
-- **API design patterns**: see [patterns/api-design-patterns.md](patterns/api-design-patterns.md) for resource naming, pagination, idempotency middleware
+- **API design patterns**: see [patterns/api-design-patterns.md](patterns/api-design-patterns.md) for resource naming, pagination, idempotency middleware, webhook delivery
+- **Testing patterns**: see [patterns/testing-patterns.md](patterns/testing-patterns.md) for integration test setup, contract testing, load testing, test doubles
 - **Observability patterns**: see [patterns/observability-patterns.md](patterns/observability-patterns.md) for logging setup, metrics, tracing, alerting rules
 - **Database patterns**: see [patterns/database-patterns.md](patterns/database-patterns.md) for migrations, pooling, transactions, query optimization
 - **Twelve-factor cheatsheet**: see [twelve-factor-cheatsheet.md](twelve-factor-cheatsheet.md) for all 12 factors with backend-specific guidance

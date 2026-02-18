@@ -36,6 +36,34 @@ COPY src/ src/
 - Combine install + cleanup in the same `RUN` — separate layers retain deleted files.
 - Use `COPY --link` for independent layers that build in parallel.
 
+### CI/CD Build Caching
+
+Local layer cache doesn't persist between CI runs. Use external cache backends:
+
+- **GitHub Actions**:
+  ```yaml
+  - uses: docker/build-push-action@v6
+    with:
+      context: .
+      cache-from: type=gha
+      cache-to: type=gha,mode=max
+  ```
+  `mode=max` caches all layers (including intermediate stages), not just the final image.
+- **Registry cache**: push cache layers to a registry, pull on next build.
+  ```bash
+  docker buildx build \
+    --cache-from type=registry,ref=ghcr.io/org/myapp:cache \
+    --cache-to type=registry,ref=ghcr.io/org/myapp:cache,mode=max \
+    -t ghcr.io/org/myapp:latest .
+  ```
+- **Local cache** (self-hosted runners):
+  ```bash
+  docker buildx build \
+    --cache-from type=local,src=/tmp/.buildx-cache \
+    --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max .
+  ```
+  Rotate cache directories to prevent unbounded growth.
+
 ## Multi-stage Builds
 
 Always multi-stage. Name every stage — never reference by index.
@@ -89,6 +117,8 @@ CMD ["node", "dist/server.js"]
   USER appuser:appgroup
   ```
 - Never bake secrets into images. No `ARG SECRET`, no `COPY .env`, no `ENV API_KEY=...`. Use BuildKit `--mount=type=secret` (see [patterns/security-hardening.md](patterns/security-hardening.md)).
+- **Sign images**: `cosign sign --key cosign.key ghcr.io/org/myapp@sha256:abc...`. Verify in CI or Kubernetes admission controller (Kyverno, Connaisseur) before deploy.
+- **Verify before pull**: `cosign verify --key cosign.pub ghcr.io/org/myapp@sha256:abc...`. Reject unsigned images in the deploy pipeline.
 - `COPY --chown=appuser:appgroup` to set ownership without extra layers.
 - Clean package caches in the same `RUN`:
   ```dockerfile

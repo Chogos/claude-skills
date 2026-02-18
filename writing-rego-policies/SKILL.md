@@ -10,7 +10,7 @@ description: Rego policy development best practices for OPA. Use when writing, m
 - Always use `import rego.v1` (OPA v0.59.0+) for modern Rego features. For OPA < v0.59.0, use `import future.keywords` instead.
 - Always use `opa fmt` for consistent formatting.
 - Use `opa check --strict` in build pipelines.
-- Prioritize clear code over assumed performance optimizations — OPA handles optimization.
+- Prioritize clear code over assumed performance optimizations — OPA handles most optimization automatically.
 
 ## Naming & Style
 
@@ -135,6 +135,30 @@ opa eval --data policy.rego --input input.json "data.authz.allow" --format=prett
 2. **Typo in field name** — Rego doesn't error on missing fields, just returns undefined. Use `opa check --strict` to catch unused variables.
 3. **Type mismatch** — comparing string `"80"` to number `80` silently fails. Use `to_number()` or ensure consistent types.
 4. **Negation on undefined** — `not x` is true when `x` is undefined AND when `x` is false. Be explicit about what you're negating.
+
+## Performance
+
+OPA optimizes most patterns automatically, but a few things matter at scale:
+
+- **Use indexing.** OPA indexes rules with equality (`==`), `in`, and glob comparisons. Structure hot-path rules so the first condition uses an indexed lookup:
+  ```rego
+  # Good — OPA indexes on input.request.kind.kind
+  deny contains msg if {
+      input.request.kind.kind == "Pod"
+      # ... rest of conditions
+  }
+  ```
+- **Avoid `http.send` in hot paths.** External calls add latency and can fail. Prefer loading external data via bundles or pushing data to OPA's in-memory store.
+- **Prefer sets over arrays for lookups.** `x in set` is O(1), `x in array` is O(n).
+- **Profile with `opa eval --profile`** to find slow rules:
+  ```bash
+  opa eval --data policy/ --input input.json --profile --format=pretty "data.authz.allow"
+  ```
+- **Benchmark with `opa bench`** to measure evaluation time:
+  ```bash
+  opa bench --data policy/ --input input.json "data.authz.allow"
+  ```
+- **Partial evaluation** (`opa eval --partial`) precomputes rules when parts of input are unknown — useful for generating optimized policies for downstream enforcement.
 
 ## New policy workflow
 

@@ -33,3 +33,24 @@ Each skill uses progressive disclosure — `SKILL.md` is the overview loaded on 
 ## Naming convention
 
 Skill directories use gerund form: `<verb>ing-<noun>` (e.g., `developing-helm-charts`).
+
+## Contributing
+
+### Structure constraints
+
+- **SKILL.md**: ~200-250 lines. This is the trigger file — keep it concise with progressive disclosure to pattern files.
+- **Pattern files** (`patterns/*.md`): 100-250 lines each. Full examples organized by use case.
+- **Reference files** (`*.md` at skill root): Cheatsheets, matrices, lookup tables.
+
+### Style
+
+- Actionable, not theoretical. Show the correct pattern, not a lecture on why.
+- Code examples over prose. Every guideline should have a code snippet.
+- Bad/good pairs for anti-patterns. Show what's wrong and the fix.
+- No duplicate content between SKILL.md and pattern files. SKILL.md summarizes, patterns go deep.
+
+### Adding content
+
+- New best practices go in SKILL.md if they fit within the line budget, otherwise create a pattern file and link to it.
+- New anti-patterns go in the existing anti-patterns file (if one exists) or as a "Rules" list in SKILL.md.
+- Cheatsheet entries should be one-liner examples with a signature and brief description.

@@ -105,6 +105,7 @@ func NewService(s UserStore) *Service {
 - Accept interfaces, return concrete structs.
 - Don't export interfaces until a second consumer exists.
 - Standard library models: `io.Reader` (1 method), `io.ReadWriter` (composed).
+- Wire dependencies through constructors (`NewService(store, logger)`) — explicit, testable, no framework needed.
 
 ## Context
 
@@ -252,15 +253,85 @@ Common patterns:
 
 Name files with platform suffix for automatic build tags: `file_linux.go`, `file_darwin.go`, `file_test.go`.
 
-## Range Over Integers (Go 1.22+)
+## Structured Logging (slog)
+
+Use `log/slog` (Go 1.21+) for structured, leveled logging. Replaces `log` for all production code.
 
 ```go
-for i := range 10 {
-    fmt.Println(i) // 0, 1, 2, ..., 9
+import "log/slog"
+
+// Create a JSON logger for production
+logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+    Level: slog.LevelInfo,
+}))
+
+// Pass as dependency — never use the global logger in library code
+type Service struct {
+    logger *slog.Logger
+    store  UserStore
+}
+
+func (s *Service) ProcessOrder(ctx context.Context, orderID string) error {
+    s.logger.InfoContext(ctx, "processing order",
+        slog.String("order_id", orderID),
+        slog.Int("retry", 0),
+    )
+    // ...
+}
+
+// Group related attributes
+logger.Info("request completed",
+    slog.Group("http",
+        slog.String("method", r.Method),
+        slog.Int("status", status),
+        slog.Duration("latency", elapsed),
+    ),
+)
+```
+
+- `slog.New(slog.NewJSONHandler(...))` for production, `slog.NewTextHandler(...)` for development.
+- Pass `*slog.Logger` as a constructor dependency. Use `slog.Default()` only in `main`.
+- Use `slog.Group` for structured nested fields. Use `LogValuer` interface for lazy/expensive values.
+
+## Range Over Functions (Go 1.23+)
+
+Custom iterators using `iter.Seq[V]` and `iter.Seq2[K, V]`:
+
+```go
+import "iter"
+
+// Return an iterator instead of collecting into a slice
+func (db *DB) Users(ctx context.Context) iter.Seq2[*User, error] {
+    return func(yield func(*User, error) bool) {
+        rows, err := db.QueryContext(ctx, "SELECT ...")
+        if err != nil {
+            yield(nil, err)
+            return
+        }
+        defer rows.Close()
+        for rows.Next() {
+            var u User
+            if err := rows.Scan(&u.Name, &u.Email); err != nil {
+                yield(nil, err)
+                return
+            }
+            if !yield(&u, nil) {
+                return
+            }
+        }
+    }
+}
+
+// Consume with range
+for user, err := range db.Users(ctx) {
+    if err != nil {
+        return err
+    }
+    process(user)
 }
 ```
 
-Replaces `for i := 0; i < 10; i++` for simple counted loops.
+Use `slices.Collect` to materialize an iterator into a slice. Standard library functions like `maps.Keys`, `maps.Values`, and `slices.Sorted` return iterators.
 
 ## Modules
 
@@ -273,8 +344,8 @@ go mod tidy                          # after adding/removing imports
 - `go.work` is for local multi-module development only — never commit it.
 - Set minimum Go version in `go.mod`:
   ```
-  go 1.22
-  toolchain go1.22.5
+  go 1.23
+  toolchain go1.23.6
   ```
 
 ## Linting
@@ -297,6 +368,10 @@ linters:
     - gosec
     - prealloc
     - noctx
+    - errorlint
+    - exhaustive
+    - copyloopvar
+    - nilerr
 linters-settings:
   revive:
     rules:

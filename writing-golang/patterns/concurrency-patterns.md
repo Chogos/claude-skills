@@ -33,7 +33,6 @@ func fetchAll(ctx context.Context, urls []string) ([]Response, error) {
     results := make([]Response, len(urls))
 
     for i, url := range urls {
-        i, url := i, url
         g.Go(func() error {
             resp, err := fetch(ctx, url)
             if err != nil {
@@ -156,6 +155,16 @@ var getConfig = sync.OnceValue(func() *Config {
     }
     return cfg
 })
+```
+
+Use `sync.OnceValues` (Go 1.21+) when the init can fail — avoids panicking:
+
+```go
+var getDB = sync.OnceValues(func() (*sql.DB, error) {
+    return sql.Open("postgres", os.Getenv("DATABASE_URL"))
+})
+
+db, err := getDB()
 ```
 
 ## Periodic Task with time.Ticker

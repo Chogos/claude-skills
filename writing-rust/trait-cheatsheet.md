@@ -386,6 +386,39 @@ Common serde attributes:
 - `#[serde(rename = "...")]` — rename a single field
 - `#[serde(deny_unknown_fields)]` — reject extra fields on deserialize
 - `#[serde(tag = "type")]` — internally tagged enum representation
+- `#[serde(untagged)]` — try each variant in order, no discriminator field
+- `#[serde(flatten)]` — inline nested struct fields into parent
+- `#[serde(with = "module")]` — custom serialize/deserialize via a module
+
+### flatten — composing structs
+
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+struct Pagination {
+    page: u32,
+    per_page: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ListUsersRequest {
+    query: Option<String>,
+    #[serde(flatten)]
+    pagination: Pagination,
+}
+// Serializes as: {"query": "...", "page": 1, "per_page": 20}
+```
+
+### untagged — transparent enums
+
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum IdOrName {
+    Id(u64),
+    Name(String),
+}
+// Accepts both: 42 and "my-resource"
+```
 
 ## Error
 

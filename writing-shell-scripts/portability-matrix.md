@@ -135,6 +135,36 @@ Portable: always use short flags. Avoid `--wildcards` and `--transform`.
 
 Portable: use `awk -F'\t' '{print $1}'` for complex field extraction.
 
+## base64 — encoding/decoding
+
+| GNU (Linux) | BSD (macOS) | Portable |
+|-------------|-------------|----------|
+| `base64 -d` (decode) | `base64 -D` (decode) | `base64 -d 2>/dev/null \|\| base64 -D` |
+| `base64 -w0` (no wrap) | `base64` (no wrap by default) | `base64 \| tr -d '\n'` |
+
+## realpath — resolve full path
+
+| GNU (Linux) | BSD (macOS) | Portable |
+|-------------|-------------|----------|
+| `realpath path` | Not available (pre-Ventura) | `python3 -c "import os; print(os.path.realpath('path'))"` |
+
+macOS 13+ (Ventura) includes `realpath`. For older macOS, use `readlink -f` (macOS 12.3+) or the `resolve_path` function above.
+
+## timeout — command timeout
+
+| GNU (Linux) | BSD (macOS) | Portable |
+|-------------|-------------|----------|
+| `timeout 30 cmd` | Not available | `gtimeout 30 cmd` (coreutils) |
+
+Fallback without coreutils:
+
+```bash
+( cmd ) & pid=$!
+( sleep 30; kill "$pid" 2>/dev/null ) & watcher=$!
+wait "$pid" 2>/dev/null; result=$?
+kill "$watcher" 2>/dev/null
+```
+
 ## General portability rules
 
 1. **Check before using GNU-specific flags**: `man command` differs between platforms
