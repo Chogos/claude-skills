@@ -109,6 +109,12 @@ Create `values.schema.json` alongside `values.yaml`. Helm validates values again
 - Run as non-root, `readOnlyRootFilesystem: true`, drop all capabilities.
 - Default `automountServiceAccountToken: false` unless required.
 - Never hardcode secrets — use `existingSecret` pattern.
+- **Encrypted values**: use `helm-secrets` (SOPS backend) to store encrypted values in Git. Supports Age, AWS KMS, GCP KMS, PGP:
+  ```bash
+  helm secrets encrypt values-prod.yaml > values-prod.enc.yaml   # encrypt
+  helm secrets upgrade myapp ./chart -f values-prod.enc.yaml     # deploy (auto-decrypts)
+  ```
+  For Kubernetes-native secret sync, prefer **External Secrets Operator (ESO)**: syncs secrets from Vault, AWS Secrets Manager, or GCP Secret Manager directly into `Secret` objects — no secrets in Git at all, even encrypted.
 
 ## Pods & Resources
 

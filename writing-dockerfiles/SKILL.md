@@ -14,6 +14,13 @@ description: Dockerfile development best practices. Use when creating, modifying
   - `distroless`: no shell, no package manager — smallest attack surface, production only.
   - `alpine`: ~5MB, has shell and apk — good default for Go/Rust static binaries. Can cause issues with Python/Node/Java native modules due to musl libc.
   - `slim`: ~70MB Debian with minimal packages — preferred for Python, Node.js, Java (glibc compatibility).
+  - `scratch`: empty image, zero overhead — for fully static Go or Rust binaries with no libc dependency:
+    ```dockerfile
+    FROM scratch
+    COPY --from=build /app/server /server
+    EXPOSE 8080
+    CMD ["/server"]
+    ```
 - Cross-architecture: `FROM --platform=linux/amd64 image:tag`.
 
 ## Layer Ordering & Caching
@@ -120,6 +127,15 @@ CMD ["node", "dist/server.js"]
 - Never bake secrets into images. No `ARG SECRET`, no `COPY .env`, no `ENV API_KEY=...`. Use BuildKit `--mount=type=secret` (see [patterns/security-hardening.md](patterns/security-hardening.md)).
 - **Sign images**: `cosign sign --key cosign.key ghcr.io/org/myapp@sha256:abc...`. Verify in CI or Kubernetes admission controller (Kyverno, Connaisseur) before deploy.
 - **Verify before pull**: `cosign verify --key cosign.pub ghcr.io/org/myapp@sha256:abc...`. Reject unsigned images in the deploy pipeline.
+- **SBOM + provenance attestations**: generate and attach via BuildKit — required for SLSA Level 2+ and supply chain compliance:
+  ```bash
+  docker buildx build \
+    --sbom=true \
+    --provenance=mode=max \
+    -t ghcr.io/org/myapp:1.0.0 \
+    --push .
+  ```
+  Attestations are stored as OCI artifacts alongside the image. Verify with `cosign verify-attestation`.
 - `COPY --chown=appuser:appgroup` to set ownership without extra layers.
 - Clean package caches in the same `RUN`:
   ```dockerfile

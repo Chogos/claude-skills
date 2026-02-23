@@ -33,6 +33,12 @@ Design APIs as resource-oriented interfaces. Clients should interact with nouns,
 - **Idempotency**: accept `Idempotency-Key` header on POST/PATCH. Store key → response mapping. Return cached response on duplicate key.
 - **Internal services**: prefer gRPC — schema-first (protobuf), streaming, codegen. REST for public-facing APIs.
 - **Documentation**: generate OpenAPI/Swagger spec from code annotations or maintain spec-first. Validate requests against the spec in tests.
+- **GraphQL**: consider when clients need flexible data fetching (mobile/web with different data requirements) or when you have a complex graph of related resources.
+  - ✅ Single endpoint; clients request exactly the fields they need — no over/under-fetching
+  - ✅ Strongly typed schema (`schema.graphql`) is the contract; self-documenting via introspection
+  - ❌ Harder to cache (POST by default); requires query depth/complexity limiting to prevent abuse
+  - ❌ File uploads, streaming, and event-driven patterns are less natural than REST or SSE
+  - Use code-first (Pothos for TypeScript, Strawberry for Python) or schema-first (SDL + codegen). Always generate typed client code from the schema.
 
 Full patterns and pseudocode: see [patterns/api-design-patterns.md](patterns/api-design-patterns.md).
 

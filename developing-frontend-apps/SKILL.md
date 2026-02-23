@@ -167,6 +167,61 @@ description: Frontend application development best practices. Use when building,
   type Role = (typeof ROLES)[number]; // 'admin' | 'editor' | 'viewer'
   ```
 
+## React 19
+
+React 19 is the current stable release. Key additions:
+
+**New hooks:**
+- `useActionState(action, initialState)` — manages async form action state (replaces `useFormState`). Returns `[state, formAction, isPending]`.
+- `useFormStatus()` — in a child of `<form>`, reads `{ pending, data, method, action }` from the parent form. No prop drilling for loading state.
+- `useOptimistic(state, updateFn)` — show optimistic UI immediately while an async action is pending. Reverts on error.
+- `use(promise | context)` — read context or suspend on a promise inside render. Replaces some `useContext` / async data patterns.
+
+```tsx
+function AddToCart({ productId }: { productId: string }) {
+  const [state, formAction, isPending] = useActionState(addToCartAction, null);
+  const [optimisticCart, addOptimistic] = useOptimistic(
+    cart,
+    (current, newItem: CartItem) => [...current, newItem],
+  );
+
+  return (
+    <form action={async (formData) => {
+      addOptimistic({ id: productId });
+      await formAction(formData);
+    }}>
+      <button disabled={isPending}>Add to cart</button>
+      {state?.error && <span role="alert">{state.error}</span>}
+    </form>
+  );
+}
+```
+
+**Ref as prop** (no more `forwardRef`):
+```tsx
+// React 19 — ref is a regular prop
+function Input({ ref, ...props }: React.ComponentProps<'input'>) {
+  return <input ref={ref} {...props} />;
+}
+```
+
+**Document metadata** — render `<title>`, `<meta>`, and `<link>` anywhere in the tree; React hoists them to `<head>`:
+```tsx
+function ProductPage({ product }: { product: Product }) {
+  return (
+    <>
+      <title>{product.name} | Shop</title>
+      <meta name="description" content={product.description} />
+      <h1>{product.name}</h1>
+    </>
+  );
+}
+```
+
+**React Compiler** — automatically memoizes components and callbacks. When enabled, manual `useMemo`, `useCallback`, and `React.memo` wrappers become largely unnecessary. Profile before adding manual memoization — the compiler may already handle it.
+
+**Server Components (RSC)**: in frameworks like Next.js App Router, components run on the server by default — no client JS, no hydration, direct DB/file access. Use `"use client"` to mark the client boundary. **Server Actions** (`"use server"` async functions) handle mutations from Server Components without a separate API layer.
+
 ## Testing
 
 ### Unit tests

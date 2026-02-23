@@ -99,7 +99,18 @@ die()       { log_error "$@"; exit 1; }
 
 - `printf '%s\n' "$msg"` over `echo` for formatted output.
 - Errors to stderr: `>&2`.
-- Use heredocs for multi-line strings.
+- Use heredocs for multi-line strings. **Quote the delimiter** (`<<'EOF'`) to prevent variable and command expansion — unquoted heredocs expand `$VAR` and `` `cmd` ``:
+  ```bash
+  # Unquoted — $VAR and $() expand (use for generating output with runtime values)
+  cat <<EOF
+  Host: $HOSTNAME  Port: $PORT
+  EOF
+
+  # Quoted — no expansion (use for writing scripts, SQL, config with literal $ chars)
+  cat <<'EOF'
+  echo "This $VARIABLE will not be expanded"
+  EOF
+  ```
 
 ## Arithmetic
 
