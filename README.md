@@ -5,14 +5,18 @@ Claude Code skills for infrastructure, languages, and development best practices
 ## Installation
 
 ```bash
-claude plugin add Chogos/claude-skills
+# Add the marketplace
+claude plugin marketplace add Chogos/claude-skills
+
+# Install the plugin
+claude plugin install chogos@chogos-skills
 ```
 
-Once installed, skills are available as slash commands with the `chogos:` prefix:
+Once installed, skills are available as slash commands:
 
 ```text
-/chogos:writing-python
-/chogos:developing-backend-services
+/writing-python
+/developing-backend-services
 ```
 
 ## Skills
