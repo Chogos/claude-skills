@@ -10,6 +10,9 @@ claude plugin marketplace add Chogos/claude-skills
 
 # Install the plugin
 claude plugin install chogos@chogos-skills
+
+# Update to latest
+claude plugin update chogos@chogos-skills
 ```
 
 Once installed, skills are available as slash commands:
