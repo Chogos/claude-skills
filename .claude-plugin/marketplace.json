@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "chogos",
-      "source": ".",
+      "source": "./",
       "description": "Claude Code skills for infrastructure, languages, and development best practices.",
       "version": "1.0.0"
     }
