@@ -2,6 +2,14 @@
 
 Cache mounts, BuildKit features, image size reduction, and .dockerignore templates.
 
+## Contents
+
+- [Cache mounts](#cache-mounts) — per-package-manager examples
+- [BuildKit features](#buildkit-features) — syntax directive, COPY --link, bind mounts, heredocs, multi-platform
+- [Reducing image size](#reducing-image-size) — techniques ranked by impact, bad/good/best examples
+- [.dockerignore patterns](#dockerignore-patterns) — universal + language-specific templates
+- [Layer analysis](#layer-analysis) — context size, layer inspection, dive
+
 ## Cache mounts
 
 Persist package manager caches across builds. The cache directory is mounted during `RUN` and never stored in a layer.
@@ -15,8 +23,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && apt-get install -y --no-install-recommends curl
 
 # apk (Alpine)
-RUN --mount=type=cache,target=/var/cache/apk \
-    apk add --no-cache curl
+RUN --mount=type=cache,target=/etc/apk/cache \
+    apk add curl
 
 # pip
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -49,6 +57,13 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release
 ```
 
+Cache mounts default to `uid=0,gid=0`. When building as a non-root user, the process can't write to the cache. Set ownership explicitly:
+
+```dockerfile
+RUN --mount=type=cache,target=/home/appuser/.cache/pip,uid=1000,gid=1000 \
+    pip install -r requirements.txt
+```
+
 Cache mounts are not invalidated by layer changes — a modified `requirements.txt` still benefits from the cached packages for unchanged deps.
 
 ## BuildKit features
@@ -56,6 +71,7 @@ Cache mounts are not invalidated by layer changes — a modified `requirements.t
 ### Syntax directive
 
 Always add as the first line:
+
 ```dockerfile
 # syntax=docker/dockerfile:1
 ```
@@ -97,6 +113,7 @@ EOF
 ```
 
 Multi-command RUN with proper error handling:
+
 ```dockerfile
 RUN <<EOF
 set -eux
@@ -119,6 +136,7 @@ docker buildx build --platform linux/arm64 -t myapp:arm64 .
 ```
 
 In the Dockerfile, use `TARGETPLATFORM`, `TARGETOS`, `TARGETARCH` build args (automatically set by BuildKit):
+
 ```dockerfile
 FROM --platform=$BUILDPLATFORM golang:1.26 AS build
 ARG TARGETOS TARGETARCH
@@ -137,6 +155,7 @@ Techniques ranked by impact:
 6. **Combine related RUN instructions** — fewer layers, smaller image
 
 Bad — 3 layers, cache persists in layer 1:
+
 ```dockerfile
 RUN apt-get update
 RUN apt-get install -y curl git
@@ -144,6 +163,7 @@ RUN rm -rf /var/lib/apt/lists/*
 ```
 
 Good — 1 layer, cache cleaned:
+
 ```dockerfile
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl git && \
@@ -151,6 +171,7 @@ RUN apt-get update && \
 ```
 
 Best — cache mount, no cleanup needed:
+
 ```dockerfile
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt/lists \
@@ -161,7 +182,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
 
 ### Universal starter
 
-```
+```text
 .git
 .github
 .vscode
@@ -178,7 +199,7 @@ Makefile
 
 ### Node.js additions
 
-```
+```text
 node_modules
 npm-debug.log*
 coverage/
@@ -188,7 +209,7 @@ dist/
 
 ### Python additions
 
-```
+```text
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -201,7 +222,7 @@ htmlcov/
 
 ### Go additions
 
-```
+```text
 vendor/
 *.test
 *.out
@@ -210,7 +231,7 @@ bin/
 
 ### Java additions
 
-```
+```text
 target/
 build/
 .gradle/
@@ -243,6 +264,7 @@ dive myapp:latest
 `dive` shows each layer's contents and highlights wasted space (files added then removed in later layers).
 
 Red flags:
+
 - Layers over 100MB — likely includes dev tools or uncleaned caches
 - Duplicate files across layers — copy-on-write overhead
 - `.git` directory in any layer — missing `.dockerignore`

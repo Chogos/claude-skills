@@ -77,6 +77,7 @@ Local layer cache doesn't persist between CI runs. Use external cache backends:
 Always multi-stage. Name every stage — never reference by index.
 
 ```dockerfile
+# syntax=docker/dockerfile:1
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -94,6 +95,8 @@ COPY --from=build /app/dist ./dist
 USER node
 CMD ["node", "dist/server.js"]
 ```
+
+Always start with `# syntax=docker/dockerfile:1` — enables cache mounts, secret mounts, SSH mounts, heredocs, and `COPY --link`.
 
 - Build stage: compilers, dev deps. Runtime stage: only artifacts.
 - `COPY --from=builder /path /path` to copy between stages.
@@ -119,12 +122,8 @@ CMD ["node", "dist/server.js"]
 
 ## Security
 
-- Run as non-root. Add `USER` after all `RUN` instructions that need root:
-  ```dockerfile
-  RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-  USER appuser:appgroup
-  ```
-- Never bake secrets into images. No `ARG SECRET`, no `COPY .env`, no `ENV API_KEY=...`. Use BuildKit `--mount=type=secret` (see [patterns/security-hardening.md](patterns/security-hardening.md)).
+- Run as non-root. Add `USER` after all `RUN` instructions that need root. Platform-specific user creation: see [patterns/security-hardening.md — Non-root users](patterns/security-hardening.md#non-root-users).
+- Never bake secrets into images. No `ARG SECRET`, no `COPY .env`, no `ENV API_KEY=...`. Use BuildKit `--mount=type=secret` (see [patterns/security-hardening.md — BuildKit secrets](patterns/security-hardening.md#buildkit-secrets)).
 - **Sign images**: `cosign sign --key cosign.key ghcr.io/org/myapp@sha256:abc...`. Verify in CI or Kubernetes admission controller (Kyverno, Connaisseur) before deploy.
 - **Verify before pull**: `cosign verify --key cosign.pub ghcr.io/org/myapp@sha256:abc...`. Reject unsigned images in the deploy pipeline.
 - **SBOM + provenance attestations**: generate and attach via BuildKit — required for SLSA Level 2+ and supply chain compliance:
@@ -137,40 +136,19 @@ CMD ["node", "dist/server.js"]
   ```
   Attestations are stored as OCI artifacts alongside the image. Verify with `cosign verify-attestation`.
 - `COPY --chown=appuser:appgroup` to set ownership without extra layers.
-- Clean package caches in the same `RUN`:
-  ```dockerfile
-  RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-      rm -rf /var/lib/apt/lists/*
-  ```
+- Clean package caches in the same `RUN` (see Layer Ordering example above). Or use cache mounts: see [patterns/optimization-patterns.md — Cache mounts](patterns/optimization-patterns.md#cache-mounts).
 
 ## .dockerignore
 
 Always create one. Without it, the entire directory (`.git`, `node_modules`, local env) goes into the build context — on large repos this can send GBs to the daemon and dramatically slow builds.
 
-```
-.git
-.github
-.vscode
-.idea
-*.md
-docker-compose*.yml
-Dockerfile*
-.dockerignore
-.env*
-**/node_modules/
-**/__pycache__/
-**/test/
-**/tests/
-```
+Universal + language-specific templates: see [patterns/optimization-patterns.md — .dockerignore patterns](patterns/optimization-patterns.md#dockerignore-patterns).
 
 ## Labels & Metadata
 
-Use OCI image-spec labels:
-```dockerfile
-LABEL org.opencontainers.image.source="https://github.com/org/repo" \
-      org.opencontainers.image.version="1.0.0" \
-      org.opencontainers.image.description="My service"
-```
+Use [OCI image-spec annotation keys](https://github.com/opencontainers/image-spec/blob/main/annotations.md) (`org.opencontainers.image.*`). All values must be strings. Custom keys use reverse-domain notation (`com.example.mykey`).
+
+At minimum, include `title`, `version`, `revision`, `created`, `source`, and `licenses`. Full label template and formatting rules: see [instruction-reference.md — LABEL](instruction-reference.md#label).
 
 ## Health Checks
 
@@ -191,6 +169,17 @@ For distroless (no curl): compile a static healthcheck binary or use the runtime
   ENTRYPOINT ["tini", "--"]
   CMD ["node", "server.js"]
   ```
+
+## Common mistakes
+
+- `FROM node:latest` or untagged — non-reproducible builds. Pin version + digest.
+- `ADD` for copying files — use `COPY`. `ADD` only for local tar extraction. ([instruction-reference.md — COPY vs ADD](instruction-reference.md#copy-vs-add))
+- Shell form `CMD node server.js` — wraps in `/bin/sh -c`, breaks signal handling. Use exec form `CMD ["node", "server.js"]`.
+- `ARG SECRET=...` or `COPY .env` — secrets baked into image layers, recoverable with `docker history`. Use `--mount=type=secret`. ([patterns/security-hardening.md — BuildKit secrets](patterns/security-hardening.md#buildkit-secrets))
+- Separate `RUN apt-get update` and `RUN apt-get install` — cache cleaned in a later layer is still stored in the earlier layer. Combine in one `RUN`.
+- Missing `USER` — container runs as root. Always add a non-root user before `CMD`.
+- `VOLUME /data` then `RUN` modifying `/data` — changes silently discarded. ([instruction-reference.md — VOLUME](instruction-reference.md#volume))
+- Missing `.dockerignore` — sends `.git`, `node_modules`, `.env` into build context.
 
 ## New Dockerfile workflow
 
@@ -224,4 +213,5 @@ For distroless (no curl): compile a static healthcheck binary or use the runtime
 
 - [Dockerfile reference](https://docs.docker.com/reference/dockerfile/) — all instructions, syntax, escape directives
 - [Docker Build best practices](https://docs.docker.com/build/building/best-practices/) — official guidance on layers, caching, multi-stage
+- [OCI image spec: annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md) — full list of `org.opencontainers.image.*` keys and formatting rules
 - [hadolint rules](https://github.com/hadolint/hadolint#rules) — DL/SC rule reference

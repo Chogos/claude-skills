@@ -2,6 +2,19 @@
 
 Claude Code skills for infrastructure, languages, and development best practices.
 
+## Installation
+
+```bash
+claude plugin add Chogos/claude-skills
+```
+
+Once installed, skills are available as slash commands with the `chogos:` prefix:
+
+```text
+/chogos:writing-python
+/chogos:developing-backend-services
+```
+
 ## Skills
 
 | Skill                         | Description                                              |
@@ -16,18 +29,21 @@ Claude Code skills for infrastructure, languages, and development best practices
 | `writing-rego-policies`       | OPA/Rego policy rules, testing, Kubernetes admission     |
 | `writing-rust`                | Rust ownership, error handling, async, traits, testing   |
 | `writing-shell-scripts`       | Bash scripting, CLI tools, deployment scripts            |
+| `writing-postgres`            | Schema design, queries, migrations — PostgreSQL          |
+| `writing-sqlite`              | Schema design, queries, migrations — SQLite              |
 
 ## Structure
 
 Each skill uses progressive disclosure — `SKILL.md` is the overview loaded on trigger, with deeper reference files loaded only when needed:
 
 ```text
-<skill>/
-├── SKILL.md              # Overview + conventions (loaded on trigger)
-├── patterns/             # Full examples by use case (loaded on demand)
-│   ├── <pattern>.md
-│   └── ...
-└── <reference>.md        # Cheatsheets, matrices (loaded on demand)
+skills/
+└── <skill>/
+    ├── SKILL.md              # Overview + conventions (loaded on trigger)
+    ├── patterns/             # Full examples by use case (loaded on demand)
+    │   ├── <pattern>.md
+    │   └── ...
+    └── <reference>.md        # Cheatsheets, matrices (loaded on demand)
 ```
 
 ## Naming convention

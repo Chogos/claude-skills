@@ -2,12 +2,20 @@
 
 Distroless builds, secret management, image scanning, and runtime constraints.
 
+## Contents
+
+- [Distroless builds](#distroless-builds) — variants, size comparison, health checks
+- [BuildKit secrets](#buildkit-secrets) — secret mounts, SSH, leak patterns
+- [Non-root users](#non-root-users) — Alpine, Debian/Ubuntu, file ownership
+- [Image scanning](#image-scanning) — Trivy, Grype, GitHub Actions, .trivyignore
+- [Runtime security](#runtime-security) — read-only, cap-drop, resource limits
+
 ## Distroless builds
 
 Google's distroless images contain only the application runtime — no shell, no package manager, no OS utilities.
 
 | Variant | Use case | Base size |
-|---------|----------|-----------|
+| --------- | ---------- | ----------- |
 | `static-debian12` | Go, Rust, any static binary | ~2MB |
 | `base-debian12` | Dynamically linked binaries (needs glibc) | ~20MB |
 | `cc-debian12` | Needs libstdc++ (C++ apps) | ~25MB |
@@ -28,7 +36,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 Size comparison for a Go binary:
 
 | Base | Image size |
-|------|-----------|
+| ------ | ----------- |
 | `ubuntu:24.04` | ~780MB |
 | `debian:12-slim` | ~200MB |
 | `alpine:3.21` | ~50MB |
@@ -42,6 +50,7 @@ Size comparison for a Go binary:
 Distroless has no `curl` or shell. Options:
 
 **Option 1** — Build health check into the application (preferred):
+
 ```go
 // Expose /healthz in your app, let the orchestrator (K8s liveness probe) call it
 http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +59,7 @@ http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 ```
 
 **Option 2** — Compile a static health check binary in the build stage:
+
 ```dockerfile
 FROM golang:1.26-alpine AS healthcheck
 RUN CGO_ENABLED=0 go install github.com/grpc-ecosystem/grpc-health-probe@latest
@@ -80,6 +90,7 @@ RUN --mount=type=secret,id=npm_token \
 ```
 
 Build command:
+
 ```bash
 docker build --secret id=npm_token,src=.npm_token .
 ```
@@ -95,6 +106,7 @@ RUN --mount=type=ssh go mod download
 ```
 
 Build command:
+
 ```bash
 docker build --ssh default .
 ```
@@ -150,6 +162,7 @@ COPY --chown=appuser:appgroup ./dist /app/dist
 ```
 
 Or set permissions explicitly:
+
 ```dockerfile
 RUN chown -R appuser:appgroup /app && \
     chmod -R 555 /app
@@ -186,7 +199,7 @@ grype myapp:latest --fail-on high
   run: docker build -t myapp:${{ github.sha }} .
 
 - name: Scan image
-  uses: aquasecurity/trivy-action@master
+  uses: aquasecurity/trivy-action@v0.31.0
   with:
     image-ref: myapp:${{ github.sha }}
     severity: HIGH,CRITICAL
@@ -196,7 +209,8 @@ grype myapp:latest --fail-on high
 ### Accepting known CVEs
 
 Create `.trivyignore` with justification:
-```
+
+```text
 # CVE in base image, no fix available, low exploitability
 CVE-2024-12345
 
@@ -210,17 +224,18 @@ Apply these flags at `docker run` or in compose/orchestration config:
 
 ```bash
 docker run \
-  --read-only \                          # read-only root filesystem
-  --tmpfs /tmp \                         # writable /tmp only
-  --cap-drop=ALL \                       # drop all Linux capabilities
-  --security-opt=no-new-privileges \     # prevent privilege escalation
-  --memory=256m \                        # memory limit
-  --cpus=0.5 \                           # CPU limit
-  --pids-limit=100 \                     # prevent fork bombs
+  --read-only \
+  --tmpfs /tmp \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --memory=256m \
+  --cpus=0.5 \
+  --pids-limit=100 \
   myapp:latest
 ```
 
 Key flags:
+
 - `--read-only`: prevents writes to the container filesystem. Mount `--tmpfs` for directories that need writes.
 - `--cap-drop=ALL`: removes all Linux capabilities. Add back specific ones with `--cap-add` only if needed.
 - `--security-opt=no-new-privileges`: blocks setuid/setgid binaries from gaining permissions.

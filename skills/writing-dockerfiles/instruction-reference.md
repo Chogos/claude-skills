@@ -2,6 +2,23 @@
 
 Per-instruction cheatsheet focused on gotchas and non-obvious behavior.
 
+## Contents
+
+- [FROM](#from) — platform pinning, ARG scope, multi-stage
+- [COPY vs ADD](#copy-vs-add) — feature matrix, when to use each
+- [RUN](#run) — shell/exec/heredoc forms, set -eux
+- [CMD vs ENTRYPOINT](#cmd-vs-entrypoint) — interaction matrix, override behavior
+- [ARG](#arg) — scope rules, cache invalidation, visibility
+- [ENV](#env) — build vs runtime, ARG override
+- [USER](#user) — creation, placement, file ownership
+- [WORKDIR](#workdir) — relative stacking, auto-creation
+- [HEALTHCHECK](#healthcheck) — options, exit codes, NONE
+- [EXPOSE](#expose) — documentation only
+- [VOLUME](#volume) — silent discard gotcha
+- [SHELL](#shell) — override default shell
+- [STOPSIGNAL](#stopsignal) — graceful shutdown signals
+- [LABEL](#label) — OCI annotations, formatting rules
+
 ## FROM
 
 ```dockerfile
@@ -10,11 +27,13 @@ FROM --platform=linux/amd64 node:24-alpine AS builder
 
 - `--platform` pins the architecture. Required for consistent cross-platform builds.
 - `ARG` before `FROM` is the only instruction allowed before `FROM`. Its scope ends at the `FROM` line:
+
   ```dockerfile
   ARG VERSION=3.14
   FROM python:${VERSION}-slim
   ARG VERSION  # must re-declare to use in this stage (value inherited)
   ```
+
 - Multiple `FROM` instructions create separate build stages. Each starts with a fresh filesystem.
 
 ## COPY vs ADD
@@ -81,7 +100,7 @@ Gotcha: heredoc lines run independently. Without `set -e`, a failing line doesn'
 ## ARG
 
 ```dockerfile
-ARG VERSION=latest
+ARG NODE_VERSION=22
 FROM node:${NODE_VERSION}
 ARG BUILD_DATE  # must re-declare after FROM
 ```
@@ -184,11 +203,38 @@ STOPSIGNAL SIGQUIT
 
 ## LABEL
 
+Metadata-only — no layer cost. Labels from parent images are inherited; child labels override parent labels with the same key.
+
 ```dockerfile
-LABEL org.opencontainers.image.source="https://github.com/org/repo" \
-      org.opencontainers.image.version="1.0.0"
+# OCI image-spec annotations (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
+LABEL org.opencontainers.image.title="My Service" \
+      org.opencontainers.image.description="Short human-readable description" \
+      org.opencontainers.image.version="1.2.3" \
+      org.opencontainers.image.revision="abc123def" \
+      org.opencontainers.image.created="2026-02-23T12:00:00Z" \
+      org.opencontainers.image.authors="team@example.com" \
+      org.opencontainers.image.url="https://example.com/myapp" \
+      org.opencontainers.image.documentation="https://docs.example.com" \
+      org.opencontainers.image.source="https://github.com/org/repo" \
+      org.opencontainers.image.vendor="Example Inc." \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.base.name="node:24-alpine" \
+      org.opencontainers.image.base.digest="sha256:abc123..."
 ```
 
-- Metadata-only, no layer cost.
-- Labels from parent images are inherited. Child labels override parent labels with the same key.
-- Inspect: `docker inspect --format='{{json .Config.Labels}}' img`.
+| Key | Format / notes |
+| --- | --- |
+| `created` | RFC 3339 — `date -u +%Y-%m-%dT%H:%M:%SZ` |
+| `licenses` | [SPDX expression](https://spdx.org/licenses/) — `Apache-2.0`, `MIT OR GPL-2.0` |
+| `base.name` | Fully-qualified ref of the **final** base image only — not multi-stage intermediaries |
+| `base.digest` | Digest of the immediate base; pair with `base.name` |
+| `revision` | SCM commit SHA or tag |
+
+Rules from the spec:
+
+- Keys must be unique; values must be strings (empty string is valid).
+- `org.opencontainers` prefix is reserved — never use it for custom keys.
+- Custom keys: use reverse-domain notation (`com.example.mykey`).
+- Consumers must not error on unknown annotation keys.
+
+Inspect labels: `docker inspect --format='{{json .Config.Labels}}' img`.

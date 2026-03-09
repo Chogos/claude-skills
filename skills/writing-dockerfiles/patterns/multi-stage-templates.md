@@ -2,6 +2,14 @@
 
 Production-ready templates for common languages. Each uses named stages, dependency caching, minimal runtime images, and non-root users.
 
+## Contents
+
+- [Go](#go) — static binary, distroless
+- [Node.js](#nodejs) — TypeScript and plain JS variants, tini
+- [Python](#python) — pip and uv variants, venv isolation
+- [Java](#java) — Maven and Gradle variants, JDK/JRE split
+- [Rust](#rust) — dummy main caching, musl static linking
+
 ## Go
 
 ```dockerfile
@@ -23,6 +31,7 @@ ENTRYPOINT ["/app"]
 ```
 
 Key choices:
+
 - `CGO_ENABLED=0` produces a fully static binary — no libc dependency, runs on scratch/distroless.
 - `-ldflags="-s -w"` strips debug info and DWARF symbols (~30% smaller binary).
 - `distroless/static` has no shell, no package manager — smallest attack surface.
@@ -55,6 +64,7 @@ CMD ["node", "dist/server.js"]
 ```
 
 Key choices:
+
 - `npm ci` (not `npm install`) for deterministic installs from lockfile.
 - Separate `npm ci --omit=dev` in runtime — devDependencies never enter the final image.
 - `tini` as PID 1 — Node.js doesn't handle signals well as PID 1 (orphaned child processes, no SIGTERM forwarding).
@@ -73,7 +83,8 @@ FROM node:24-alpine AS runtime
 RUN apk add --no-cache tini
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY src/ src/
+COPY package.json ./
 USER node
 EXPOSE 3000
 ENTRYPOINT ["tini", "--"]
@@ -106,6 +117,7 @@ CMD ["python", "-m", "myapp"]
 ```
 
 Key choices:
+
 - Virtual env (`/opt/venv`) isolates deps and makes them easy to copy as a single directory.
 - `--no-cache-dir` skips pip's download cache — no point caching inside a build layer.
 - `slim` over `alpine` — many Python packages require glibc and fail to build on alpine without workarounds.
@@ -115,7 +127,7 @@ Key choices:
 ```dockerfile
 # syntax=docker/dockerfile:1
 FROM python:3.14-slim AS build
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.6 /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
@@ -157,6 +169,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
 Key choices:
+
 - `jdk` for build, `jre` for runtime — JDK adds ~200MB of compiler tools.
 - `dependency:go-offline` caches all Maven deps before source copy.
 - `-DskipTests` in build stage — tests should run in a separate `test` target or CI step.
@@ -212,6 +225,7 @@ ENTRYPOINT ["/myapp"]
 ```
 
 Key choices:
+
 - Dummy `main.rs` trick — `cargo build` compiles and caches all dependencies. Replacing `src/` and touching `main.rs` triggers only the application recompile.
 - `musl-dev` for static linking on alpine. Binary runs on distroless/scratch without libc.
 - `strip` removes symbol tables (~50-70% smaller binary).
