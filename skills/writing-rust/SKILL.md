@@ -146,9 +146,19 @@ fn load_config(path: &Path) -> Result<Config> {
 }
 ```
 
+**`let-else`** for early returns on pattern match failure:
+
+```rust
+let Some(user) = db.find_user(id)? else {
+    return Err(Error::NotFound(id.to_string()));
+};
+// user is unwrapped here — no nesting
+```
+
 **Rules**:
 - No `.unwrap()` in library code.
 - `expect("reason")` only when provably safe (e.g., after a check or on a known-valid constant).
+- `#[expect(lint_name)]` over `#[allow(lint_name)]` — warns when the suppression becomes unnecessary.
 - Propagate with `?`. Add `.context()` when the surrounding context would otherwise be lost.
 
 See [patterns/error-handling-patterns.md](patterns/error-handling-patterns.md) for conversion chains, backtrace, and decision trees.

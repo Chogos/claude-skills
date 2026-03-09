@@ -145,6 +145,13 @@ Use queues when: the operation is slow (email, PDF generation), the caller doesn
 - **Backpressure**: limit consumer concurrency. Prefetch a bounded number of messages. If processing slows down, let the queue buffer — don't let consumers OOM.
 - **Message schema**: version your message payloads. Include a `type` and `version` field. Support backward-compatible evolution.
 
+## Real-Time Communication
+
+- **Server-Sent Events (SSE)**: unidirectional server-to-client streaming over HTTP. Use for notifications, live feeds, progress updates. Simpler than WebSocket — auto-reconnects, works through proxies, no special protocol upgrade.
+- **WebSocket**: bidirectional full-duplex communication. Use when the client also sends frequent messages (chat, collaborative editing, gaming). Implement heartbeats (ping/pong every 30s), handle reconnection with exponential backoff, and authenticate on the initial handshake (token in query param or first message).
+
+Prefer SSE over WebSocket when data only flows server→client.
+
 ## Webhooks
 
 - **Outbound delivery**: POST JSON to subscriber URLs. Sign with HMAC-SHA256 of `{timestamp}.{body}` using a shared secret. Send signature in `X-Webhook-Signature` header, event ID in `X-Webhook-ID`.
@@ -160,6 +167,8 @@ See [patterns/api-design-patterns.md](patterns/api-design-patterns.md) for signa
 - **Retry transient errors**: network timeouts, 503s, connection resets. Use exponential backoff with jitter: `delay = min(base * 2^attempt + random_jitter, max_delay)`.
 - **Circuit breaker**: protect against cascading failures. Three states: closed → open (after threshold failures) → half-open (probe requests). Typical config: `failure_threshold=5, recovery_timeout=30s, half_open_max=3`.
 - **Wrap errors with context**: when propagating errors, add what operation failed and why. `"failed to fetch user 123: connection refused"` over `"connection refused"`.
+
+Full resilience patterns: see [patterns/resilience-patterns.md](patterns/resilience-patterns.md) for retry, circuit breaker, timeout cascade, bulkhead, and fallback implementations.
 
 ## Testing
 
@@ -217,6 +226,7 @@ Full patterns: see [patterns/testing-patterns.md](patterns/testing-patterns.md).
 - **API design patterns**: see [patterns/api-design-patterns.md](patterns/api-design-patterns.md) for resource naming, pagination, idempotency middleware, webhook delivery
 - **Testing patterns**: see [patterns/testing-patterns.md](patterns/testing-patterns.md) for integration test setup, contract testing, load testing, test doubles
 - **Observability patterns**: see [patterns/observability-patterns.md](patterns/observability-patterns.md) for logging setup, metrics, tracing, alerting rules
+- **Resilience patterns**: see [patterns/resilience-patterns.md](patterns/resilience-patterns.md) for retry, circuit breaker, timeout cascade, bulkhead, fallback
 - **Database patterns**: see [patterns/database-patterns.md](patterns/database-patterns.md) for migrations, pooling, transactions, query optimization
 - **Twelve-factor cheatsheet**: see [twelve-factor-cheatsheet.md](twelve-factor-cheatsheet.md) for all 12 factors with backend-specific guidance
 

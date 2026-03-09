@@ -35,7 +35,7 @@ dependencies = [
     "pydantic>=2.0,<3",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",

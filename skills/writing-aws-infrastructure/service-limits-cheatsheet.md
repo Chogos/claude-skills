@@ -81,8 +81,8 @@ Default quotas for commonly used services. Check [Service Quotas console](https:
 | Task definition revisions | No limit | No | Old revisions are deregistered, not deleted |
 | Containers per task definition | 10 | No | |
 | Task definition size | 64 KB | No | |
-| Fargate On-Demand tasks per region | 500 | Yes | Request increase well before launch |
-| Fargate Spot tasks per region | 500 | Yes | |
+| Fargate On-Demand tasks per region | 1,000 | Yes | Check current value in Service Quotas console; varies by region |
+| Fargate Spot tasks per region | 1,000 | Yes | Check current value in Service Quotas console |
 | ECS Exec sessions | 100 per container instance | No | |
 | Target groups per service | 5 | No | |
 

@@ -231,6 +231,7 @@ create index concurrently idx_orders_user_id on orders(user_id);
 
 - Cannot run inside a transaction block — migration tools that wrap in a transaction must handle this as a separate non-transactional step.
 - If it fails, it leaves an invalid index. Clean up with `drop index concurrently idx_name`.
+- Use `reindex concurrently idx_name` (PG 12+) to rebuild an existing index without blocking writes — alternative to drop + recreate.
 - Check for invalid indexes after deploy:
 
 ```sql

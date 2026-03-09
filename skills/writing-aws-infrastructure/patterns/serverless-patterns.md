@@ -208,7 +208,8 @@ import { Stack, StackProps, Duration } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import {
   StateMachine, Wait, WaitTime, Choice, Condition,
-  Succeed, Fail, TaskInput, LogLevel, StateMachineType
+  Succeed, Fail, TaskInput, LogLevel, StateMachineType,
+  DefinitionBody,
 } from "aws-cdk-lib/aws-stepfunctions";
 import { LambdaInvoke } from "aws-cdk-lib/aws-stepfunctions-tasks";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";

@@ -11,4 +11,6 @@
 | Error (library) | `thiserror` | Derive Error + Display for enum errors |
 | Error (app) | `anyhow` | Ergonomic error handling with context |
 | Testing | `proptest`, `insta` | Property-based testing, snapshot testing |
+| Test runner | `cargo-nextest` | Faster parallel test execution, better output |
+| Supply chain | `cargo-deny` | License checking, advisory DB, duplicate detection |
 | Async runtime | `tokio` | Multi-threaded, full-featured async runtime |

@@ -21,7 +21,7 @@ keywords:
   - my-app
 dependencies:
   - name: postgresql
-    version: "~15.5.0"
+    version: "~18.5.0"
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
 ```

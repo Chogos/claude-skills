@@ -446,6 +446,7 @@ Run: `golangci-lint run ./...`
 
 **Error handling patterns**: See [patterns/error-handling-patterns.md](patterns/error-handling-patterns.md) for wrapping chains, sentinel errors, custom types, multi-error aggregation, HTTP error mapping
 **Concurrency patterns**: See [patterns/concurrency-patterns.md](patterns/concurrency-patterns.md) for worker pools, fan-out/fan-in, graceful shutdown, periodic tasks
+**HTTP patterns**: See [patterns/http-patterns.md](patterns/http-patterns.md) for middleware, JSON helpers, request validation, server setup with graceful shutdown
 **Testing patterns**: See [patterns/testing-patterns.md](patterns/testing-patterns.md) for table-driven tests, httptest, mocking, golden files, benchmarks
 **Standard library**: See [stdlib-cheatsheet.md](stdlib-cheatsheet.md) for quick reference on io, net/http, encoding/json, context, sync, and more
 

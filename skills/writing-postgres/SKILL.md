@@ -203,6 +203,17 @@ on conflict (sku) do update set
 
 Use `on conflict (col) do nothing` to silently skip duplicates.
 
+**`MERGE`** (PG 15+) for complex conditional logic — update, insert, or delete in a single statement:
+
+```sql
+merge into inventory as t
+using incoming_stock as s on t.sku = s.sku
+when matched then
+    update set quantity = t.quantity + s.quantity, updated_at = now()
+when not matched then
+    insert (sku, quantity) values (s.sku, s.quantity);
+```
+
 Use `returning` to get column values back from any `insert`, `update`, or `delete` without a second query:
 
 ```sql

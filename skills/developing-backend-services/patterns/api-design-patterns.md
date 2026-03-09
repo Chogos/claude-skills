@@ -270,13 +270,15 @@ function verify_webhook(request, secret):
 
 ### Retry Policy
 
-| Attempt | Delay | Cumulative |
-|---------|-------|-----------|
+Add jitter to each delay to prevent thundering herd: `delay = base_delay * 2^attempt + random(0, base_delay)`.
+
+| Attempt | Base delay | Cumulative |
+|---------|-----------|-----------|
 | 1 | Immediate | 0s |
-| 2 | 60s | 1 min |
-| 3 | 300s | 6 min |
-| 4 | 3600s | 1 hr 6 min |
-| 5 | 86400s | ~25 hrs |
+| 2 | 60s + jitter | ~1 min |
+| 3 | 300s + jitter | ~6 min |
+| 4 | 3600s + jitter | ~1 hr |
+| 5 | 86400s + jitter | ~25 hrs |
 
 After 5 failures: mark endpoint as disabled. Notify subscriber via email or dashboard. Store every delivery attempt (timestamp, HTTP status, latency) for debugging. Expose delivery log via admin API.
 

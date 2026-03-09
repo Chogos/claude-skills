@@ -125,9 +125,7 @@ func fanOutFanIn(ctx context.Context, input <-chan Task, workers int) <-chan Res
 
     // Fan-out: launch N workers
     for range workers {
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
+        wg.Go(func() {
             for task := range input {
                 select {
                 case results <- doWork(ctx, task):
@@ -135,7 +133,7 @@ func fanOutFanIn(ctx context.Context, input <-chan Task, workers int) <-chan Res
                     return
                 }
             }
-        }()
+        })
     }
 
     // Fan-in: close results when all workers finish
@@ -163,7 +161,7 @@ type Client struct {
 
 func (c *Client) getConn() (*grpc.ClientConn, error) {
     c.initOnce.Do(func() {
-        c.conn, c.initErr = grpc.Dial("localhost:9090", grpc.WithInsecure())
+        c.conn, c.initErr = grpc.NewClient("localhost:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
     })
     return c.conn, c.initErr
 }

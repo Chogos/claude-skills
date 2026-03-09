@@ -43,6 +43,7 @@ COPY src/ src/
 - Each `RUN`, `COPY`, `ADD` creates a layer. `ENV`, `LABEL`, `EXPOSE`, `WORKDIR` are metadata-only.
 - Combine install + cleanup in the same `RUN` — separate layers retain deleted files.
 - Use `COPY --link` for independent layers that build in parallel.
+- Use `COPY --parents` (BuildKit) to preserve directory structure: `COPY --parents src/app/*.py ./`.
 
 ### CI/CD Build Caching
 

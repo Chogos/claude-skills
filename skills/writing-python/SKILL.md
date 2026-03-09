@@ -56,6 +56,32 @@ build-backend = "hatchling.build"
 
 **`[dependency-groups]`** (PEP 735) for development/CI tools — not included when the package is installed by consumers. **`[project.optional-dependencies]`** for optional features users can install (`pip install my-package[postgres]`). Don't mix them: dev tools go in dependency-groups, optional runtime features go in optional-dependencies.
 
+**Inline script metadata** (PEP 723) — declare dependencies for single-file scripts. `uv run` auto-installs them:
+
+```python
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["httpx", "rich"]
+# ///
+
+import httpx
+from rich import print
+print(httpx.get("https://api.example.com").json())
+```
+
+## Modern Syntax
+
+- **`match` statement** (3.10+) for structural pattern matching:
+  ```python
+  match event:
+      case {"type": "click", "button": button}:
+          handle_click(button)
+      case {"type": "key", "code": code} if code.startswith("F"):
+          handle_function_key(code)
+      case _:
+          pass
+  ```
+
 ## Type Hints
 
 Type-hint all public function signatures — parameters and return types.
@@ -66,6 +92,7 @@ Type-hint all public function signatures — parameters and return types.
 - `def f[T](x: T) -> T` (3.12+) for generic functions. `TypeVar` for older Python.
 - Annotations are lazily evaluated by default (3.14+, PEP 649) — no more `from __future__ import annotations` for forward refs.
 - `Protocol` over `ABC` — structural subtyping, no inheritance required.
+- Template strings (3.14+): `t"Hello {name}"` — returns a `Template` object for deferred/safe interpolation, not a `str`.
 - Never use `Any` without a comment explaining why.
 
 ```python
@@ -93,7 +120,6 @@ See [type-hints-cheatsheet.md](type-hints-cheatsheet.md) for the full reference.
 - `contextlib.suppress()` for intentional ignoring.
 - Never swallow exceptions silently.
 - `ExceptionGroup` + `except*` (3.11+) for handling multiple concurrent errors (from `TaskGroup`, `gather`).
-- Template strings (3.14+) for deferred/safe interpolation: `t"Hello {name}"` — returns a `Template` object, not a `str`.
 
 ```python
 class AppError(Exception):
@@ -315,11 +341,12 @@ logger = logging.getLogger(__name__)
 
   structlog.configure(
       processors=[
+          structlog.contextvars.merge_contextvars,
           structlog.stdlib.add_log_level,
           structlog.processors.TimeStamper(fmt="iso"),
           structlog.processors.JSONRenderer(),
       ],
-      wrapper_class=structlog.stdlib.BoundLogger,
+      logger_factory=structlog.PrintLoggerFactory(),
   )
   log = structlog.get_logger()
   log.info("order_created", order_id="abc123", total=42.50)

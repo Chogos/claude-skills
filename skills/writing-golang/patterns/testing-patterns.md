@@ -256,6 +256,32 @@ func TestPeriodicRefresh(t *testing.T) {
 
 `synctest.Wait()` blocks until all goroutines in the test bubble are idle. The fake clock only advances when all goroutines are blocked on time operations.
 
+## Fuzz Testing (Go 1.18+)
+
+Fuzz tests discover edge cases by generating random inputs. The fuzzer mutates seed inputs and tracks code coverage to find crashes and panics.
+
+```go
+func FuzzParseURL(f *testing.F) {
+    // Seed corpus — the fuzzer mutates these
+    f.Add("https://example.com/path?q=1")
+    f.Add("http://localhost:8080")
+    f.Add("")
+
+    f.Fuzz(func(t *testing.T, input string) {
+        result, err := ParseURL(input)
+        if err != nil {
+            return // invalid input is expected, just don't panic
+        }
+        // Round-trip: parsed URL should re-serialize to valid form
+        if _, err := ParseURL(result.String()); err != nil {
+            t.Errorf("round-trip failed for %q: %v", input, err)
+        }
+    })
+}
+```
+
+Run: `go test -fuzz=FuzzParseURL -fuzztime=30s ./...`. Failing inputs are saved to `testdata/fuzz/` and replayed as regression tests.
+
 ## Benchmark Template
 
 Use `b.ResetTimer()` after expensive setup to exclude it from timing.

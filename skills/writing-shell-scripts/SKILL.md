@@ -29,6 +29,7 @@ Use `|| true` only when explicitly ignoring failures.
 ## Variables
 
 - **Always** quote: `"$variable"`, `"${prefix}_${suffix}"`.
+- **Always** `$(command)` over backticks — nestable and unambiguous.
 - `readonly` or `declare -r` for constants. `UPPER_CASE` for constants/environment variables.
 - `local` for function variables. `lower_case` for local/function-scoped variables.
 - Avoid globals; prefer function parameters and return values.

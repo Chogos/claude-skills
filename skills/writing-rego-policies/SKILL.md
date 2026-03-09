@@ -161,6 +161,51 @@ OPA optimizes most patterns automatically, but a few things matter at scale:
   ```
 - **Partial evaluation** (`opa eval --partial`) precomputes rules when parts of input are unknown — useful for generating optimized policies for downstream enforcement.
 
+## Bundles and Decision Logging
+
+### Bundles
+
+Bundles are the standard way to distribute policies and data in production. OPA periodically polls a bundle server (S3, GCS, HTTP) for updates.
+
+```yaml
+# OPA config (opa-config.yaml)
+services:
+  bundle-server:
+    url: https://bundle-server.example.com
+
+bundles:
+  authz:
+    service: bundle-server
+    resource: bundles/authz.tar.gz
+    polling:
+      min_delay_seconds: 10
+      max_delay_seconds: 30
+```
+
+Build a bundle: `opa build -b policy/ -o bundle.tar.gz`. Bundles include `.rego` files, `data.json`, and an optional `.manifest` for roots.
+
+### Decision Logging
+
+Decision logs provide an audit trail of every policy evaluation — who asked, what input, what result.
+
+```yaml
+decision_logs:
+  service: log-server
+  reporting:
+    min_delay_seconds: 5
+    max_delay_seconds: 10
+  mask_decision: /system/log/mask  # policy to redact sensitive fields
+```
+
+Mask sensitive fields to avoid logging PII or secrets:
+
+```rego
+package system.log
+
+mask contains "/input/password"
+mask contains "/input/token"
+```
+
 ## New policy workflow
 
 ```

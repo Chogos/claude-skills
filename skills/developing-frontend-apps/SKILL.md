@@ -85,7 +85,7 @@ description: Frontend application development best practices. Use when building,
 - **ARIA only when HTML falls short**. A `<button>` already has `role="button"` — don't add it again.
 - **Color contrast**. 4.5:1 for normal text, 3:1 for large text (18px+ bold or 24px+).
 - **Focus management**. Trap focus in modals. Restore focus to the trigger element on close.
-- **Test with a screen reader**. VoiceOver (macOS), NVDA (Windows). Run `axe-core` in CI.
+- **Test with a screen reader**. VoiceOver (macOS), NVDA (Windows). Run `@axe-core/cli` or `vitest-axe` in CI.
 
 ## CSS Architecture
 
@@ -132,6 +132,14 @@ description: Frontend application development best practices. Use when building,
   ```html
   <button popovertarget="menu">Open</button>
   <div id="menu" popover>Popover content</div>
+  ```
+- **`@starting-style`**. Entry animations for elements transitioning from `display: none` or entering the DOM:
+  ```css
+  dialog[open] {
+    opacity: 1;
+    transition: opacity 0.3s;
+    @starting-style { opacity: 0; }
+  }
   ```
 - **View Transitions API**. Animated transitions between DOM states or pages with `document.startViewTransition()`. Pair with `view-transition-name` CSS property to animate specific elements between states.
 
@@ -318,7 +326,7 @@ function ProductPage({ product }: { product: Product }) {
 2. `npx tsc --noEmit` — fix type errors
 3. `npx vitest run` — fix failing tests
 4. `npx playwright test` — fix E2E failures
-5. `npx axe-core` or `jest-axe` — fix accessibility violations
+5. `npx @axe-core/cli` or `vitest-axe` in tests — fix accessibility violations
 6. `npx vite build && npx vite-bundle-visualizer` — verify bundle under 200KB gzipped
 7. Lighthouse CI — verify performance score ≥ 90, accessibility ≥ 95
 8. Repeat until all checks pass clean

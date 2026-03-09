@@ -7,6 +7,7 @@ description: SQLite best practices. Use when writing, reviewing, or modifying SQ
 
 ## Contents
 
+- [Common Extensions](#common-extensions)
 - [Type Affinity](#type-affinity)
 - [Naming](#naming)
 - [Constraints](#constraints)
@@ -23,6 +24,17 @@ description: SQLite best practices. Use when writing, reviewing, or modifying SQ
 - [Vacuum and Maintenance](#vacuum-and-maintenance)
 - [Anti-Patterns](#anti-patterns)
 - [New Schema Checklist](#new-schema-checklist)
+
+## Common Extensions
+
+SQLite is modular — many features are compile-time extensions. Most distributions include these by default, but verify with `PRAGMA compile_options`:
+
+| Extension | Purpose |
+|-----------|---------|
+| `json1` | JSON functions (`json_extract`, `json_each`, `json_group_array`) |
+| `fts5` | Full-text search with ranking and boolean queries |
+| `rtree` | Spatial indexing for range and bounding-box queries |
+| `math` | `ceil()`, `floor()`, `log()`, `pow()`, `sqrt()` (3.35.0+) |
 
 ## Type Affinity
 
