@@ -1,0 +1,14 @@
+{
+  "name": "chogos-skills",
+  "owner": {
+    "name": "Chogos"
+  },
+  "plugins": [
+    {
+      "name": "chogos",
+      "source": ".",
+      "description": "Claude Code skills for infrastructure, languages, and development best practices.",
+      "version": "1.0.0"
+    }
+  ]
+}
