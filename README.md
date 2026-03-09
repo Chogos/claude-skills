@@ -12,6 +12,7 @@ claude plugin marketplace add Chogos/claude-skills
 claude plugin install chogos@chogos-skills
 
 # Update to latest
+claude plugin marketplace update chogos-skills
 claude plugin update chogos@chogos-skills
 ```
 
