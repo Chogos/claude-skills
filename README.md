@@ -30,6 +30,7 @@ Once installed, skills are available as slash commands:
 | `developing-backend-services` | API design, database patterns, observability, 12-factor  |
 | `developing-frontend-apps`    | Component architecture, performance, accessibility       |
 | `developing-helm-charts`      | Helm chart conventions, security, values design          |
+| `managing-k8s-operators`      | K8s operators: Strimzi, Keycloak, Prometheus, certs      |
 | `writing-aws-infrastructure`  | IAM, CloudFormation/CDK, VPC, Lambda, ECS, cost          |
 | `writing-dockerfiles`         | Dockerfile conventions, multi-stage builds, security     |
 | `writing-golang`              | Go project layout, error handling, concurrency, testing  |
